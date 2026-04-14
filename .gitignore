@@ -1,0 +1,102 @@
+# =========================
+# OS / editor junk
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# Quartus generated files
+# =========================
+db/
+incremental_db/
+simulation/
+greybox_tmp/
+hc_output/
+ip/
+
+*.qws
+*.smsg
+*.summary
+*.pin
+*.jdi
+*.bak
+*.done
+*.rpt
+*.chg
+*.qdf
+*.qpf.bak
+*.qsf.bak
+
+# Quartus programming/output files
+output_files/
+*.sof
+*.pof
+*.cdf
+*.jic
+*.rbf
+*.svf
+
+# Netlists / generated HDL
+*.cmp
+*.bsf
+*.ppf
+*.xml
+*.map
+*.eqn
+*.qip
+*.sip
+*.spd
+*.vho
+
+# =========================
+# ModelSim / Questa
+# =========================
+transcript
+modelsim.ini
+vsim.wlf
+wlft*
+work/
+*.wlf
+*.vstf
+*.log
+
+# Simulation outputs
+*.hex
+*.mif.bak
+
+# =========================
+# Temporary / cache
+# =========================
+*.tmp
+*.temp
+*.cache
+
+# =========================
+# Python assembler / scripts
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# =========================
+# Keep these tracked
+# =========================
+#!*.qpf
+#!*.qsf
+#!*.vhd
+#!*.v
+#!*.sv
+#!*.mif
+#!*.hex
+#!README*

@@ -1,0 +1,47 @@
+instr_rom:
+  addr        : bit_16
+  q           : bit_32
+
+control_unit inputs:
+  clk         : bit_1
+  reset       : bit_1
+  am          : bit_2
+  opcode      : bit_6
+  z_flag      : bit_1
+
+control_unit outputs:
+  ir_load       : bit_1
+  pc_inc        : bit_1
+  pc_load       : bit_1
+  pc_from_rx    : bit_1
+  reg_write     : bit_1
+  rf_input_sel  : bit_3
+  alu_operation : bit_3
+  alu_op1_sel   : bit_2
+  alu_op2_sel   : bit_1
+  clr_z_flag    : bit_1
+
+datapath inputs:
+  clk           : bit_1
+  reset         : bit_1
+  instr_in      : bit_32
+  ir_load       : bit_1
+  pc_inc        : bit_1
+  pc_load       : bit_1
+  pc_from_rx    : bit_1
+  reg_write     : bit_1
+  rf_input_sel  : bit_3
+  alu_operation : bit_3
+  alu_op1_sel   : bit_2
+  alu_op2_sel   : bit_1
+  clr_z_flag    : bit_1
+
+datapath outputs:
+  am            : bit_2
+  opcode        : bit_6
+  z_flag        : bit_1
+  pc_out        : bit_16
+  dbg_ir        : bit_32
+  dbg_rx        : bit_16
+  dbg_rz        : bit_16
+  dbg_alu       : bit_16
