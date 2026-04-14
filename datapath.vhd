@@ -8,29 +8,38 @@ use work.various_constants.all;
 
 entity datapath is
     port (
+        -- Clock and Reset
         clk           : in  bit_1;
         reset         : in  bit_1;
-
-        -- control signals from control unit
+        
+        -- Memory Data Input
+        pm_q          : in  bit_16;
+        
+        -- Control Signals from Control Unit
         ir_load       : in  bit_1;
+        op_load       : in  bit_1;
+        pm_addr_sel   : in  bit_1;
         pc_inc        : in  bit_1;
+        pc_step_sel   : in  bit_1;
         pc_load       : in  bit_1;
         pc_from_rx    : in  bit_1;
-
         reg_write     : in  bit_1;
         rf_input_sel  : in  bit_3;
-
         alu_operation : in  bit_3;
         alu_op1_sel   : in  bit_2;
         alu_op2_sel   : in  bit_1;
         clr_z_flag    : in  bit_1;
 
-        -- decoded fields out to control unit
+        -- Outputs to Memory and Control Unit
+        pm_addr       : out bit_16;
         am            : out bit_2;
         opcode        : out bit_6;
+        z_flag        : out bit_1;
+        pc_out        : out bit_16;
 
-        -- debug outputs
-        dbg_pc        : out bit_16;
+        -- Debug outputs
+        dbg_ir_word   : out bit_16;
+        dbg_op        : out bit_16;
         dbg_ir        : out bit_32;
         dbg_rx        : out bit_16;
         dbg_rz        : out bit_16;
@@ -40,95 +49,94 @@ end entity;
 
 architecture rtl of datapath is
 
-    --------------------------------------------------------------------
-    -- Tiny built-in 32-bit instruction ROM for bring-up
-    -- Replace this later with proper program memory.
-    --------------------------------------------------------------------
-    type rom_t is array (0 to 15) of bit_32;
-
-    constant program_rom : rom_t := (
-        -- 0: LDR R1, #5
-        0  => am_immediate & ldr  & X"1" & X"0" & X"0005",
-
-        -- 1: ADD R2, R1, #3   => R2 = 8
-        1  => am_immediate & addr & X"2" & X"1" & X"0003",
-
-        -- 2: NOOP
-        2  => am_inherent  & noop & X"0" & X"0" & X"0000",
-
-        -- 3: JMP #3   (loop forever)
-        3  => am_immediate & jmp  & X"0" & X"0" & X"0003",
-
-        others => X"00000000"
-    );
-
+    -- Internal Registers
     signal pc_reg       : bit_16 := X"0000";
-    signal ir_reg       : bit_32 := X"00000000";
+    signal ir_word      : bit_16 := X"0000"; -- Holds AM, Opcode, Rz, Rx
+    signal op_word      : bit_16 := X"0000"; -- Holds 16-bit Immediate/Address
 
+    -- Instruction Decoding Signals
     signal ir_am        : bit_2;
     signal ir_opcode    : bit_6;
     signal ir_rz        : bit_4;
     signal ir_rx        : bit_4;
-    signal ir_operand   : bit_16;
 
+    -- Component connection signals
     signal sel_z_i      : integer range 0 to 15 := 0;
     signal sel_x_i      : integer range 0 to 15 := 0;
-
     signal rx_s         : bit_16;
     signal rz_s         : bit_16;
-    signal r7_unused    : bit_16;
-
     signal alu_result_s : bit_16;
-    signal z_flag_unused: bit_1;
+    signal z_flag_s     : bit_1;
+
+    -- Unused component ports tied off
+    signal r7_unused    : bit_16;
 
 begin
 
     --------------------------------------------------------------------
-    -- Decode fields from current instruction register
+    -- Program Memory Address Multiplexer
     --------------------------------------------------------------------
-    ir_am      <= ir_reg(31 downto 30);
-    ir_opcode  <= ir_reg(29 downto 24);
-    ir_rz      <= ir_reg(23 downto 20);
-    ir_rx      <= ir_reg(19 downto 16);
-    ir_operand <= ir_reg(15 downto 0);
-
-    am     <= ir_am;
-    opcode <= ir_opcode;
-
-    sel_z_i <= to_integer(unsigned(ir_rz));
-    sel_x_i <= to_integer(unsigned(ir_rx));
+    -- '0' = point to current PC (to fetch ir_word)
+    -- '1' = point to PC + 1 (to fetch op_word)
+    pm_addr <= pc_reg when (pm_addr_sel = '0') else 
+               std_logic_vector(unsigned(pc_reg) + 1);
 
     --------------------------------------------------------------------
-    -- PC and IR registers
+    -- Instruction Decoding (from 16-bit ir_word)
+    --------------------------------------------------------------------
+    -- Upper 16 bits of the ReCOP 32-bit instruction
+    ir_am      <= ir_word(15 downto 14);
+    ir_opcode  <= ir_word(13 downto 8);
+    ir_rz      <= ir_word(7 downto 4);
+    ir_rx      <= ir_word(3 downto 0);
+
+    am         <= ir_am;
+    opcode     <= ir_opcode;
+
+    sel_z_i    <= to_integer(unsigned(ir_rz));
+    sel_x_i    <= to_integer(unsigned(ir_rx));
+
+    --------------------------------------------------------------------
+    -- Datapath Registers (PC, IR, OP)
     --------------------------------------------------------------------
     process(clk, reset)
     begin
         if reset = '1' then
-            pc_reg <= X"0000";
-            ir_reg <= X"00000000";
+            pc_reg  <= X"0000";
+            ir_word <= X"0000";
+            op_word <= X"0000";
         elsif rising_edge(clk) then
 
-            -- fetch current instruction into IR
+            -- Fetch instruction word
             if ir_load = '1' then
-                ir_reg <= program_rom(to_integer(unsigned(pc_reg(3 downto 0))));
+                ir_word <= pm_q;
             end if;
 
-            -- update PC
+            -- Fetch operand word
+            if op_load = '1' then
+                op_word <= pm_q;
+            end if;
+
+            -- Program Counter Update Logic
             if pc_load = '1' then
                 if pc_from_rx = '1' then
-                    pc_reg <= rx_s;         -- JMP Rx
+                    pc_reg <= rx_s;         -- Branch/Jump to Rx
                 else
-                    pc_reg <= ir_operand;   -- JMP #addr
+                    pc_reg <= op_word;      -- Branch/Jump to Immediate Address
                 end if;
             elsif pc_inc = '1' then
-                pc_reg <= std_logic_vector(unsigned(pc_reg) + 1);
+                if pc_step_sel = '0' then
+                    pc_reg <= std_logic_vector(unsigned(pc_reg) + 1); -- Step 1
+                else
+                    pc_reg <= std_logic_vector(unsigned(pc_reg) + 2); -- Step 2
+                end if;
             end if;
 
         end if;
     end process;
 
     --------------------------------------------------------------------
-    -- General-purpose register file
+    -- Instantiate Register File
     --------------------------------------------------------------------
     u_regfile : entity work.regfile
         port map (
@@ -141,12 +149,12 @@ begin
             rz           => rz_s,
             rf_input_sel => rf_input_sel,
 
-            ir_operand   => ir_operand,
-            dm_out       => X"0000",       -- not used yet
+            ir_operand   => op_word,       -- Operand word feeds into RF
+            dm_out       => X"0000",       -- Data memory input (tie off until added)
             aluout       => alu_result_s,
-            rz_max       => X"0000",       -- not used yet
-            sip_hold     => X"0000",       -- not used yet
-            er_temp      => '0',           -- not used yet
+            rz_max       => X"0000",
+            sip_hold     => X"0000",
+            er_temp      => '0',
 
             r7           => r7_unused,
 
@@ -156,12 +164,12 @@ begin
         );
 
     --------------------------------------------------------------------
-    -- ALU
+    -- Instantiate ALU
     --------------------------------------------------------------------
     u_alu : entity work.alu
         port map (
             clk           => clk,
-            z_flag        => z_flag_unused,
+            z_flag        => z_flag_s,
             alu_operation => alu_operation,
             alu_op1_sel   => alu_op1_sel,
             alu_op2_sel   => alu_op2_sel,
@@ -170,19 +178,24 @@ begin
 
             rx            => rx_s,
             rz            => rz_s,
-            ir_operand    => ir_operand,
+            ir_operand    => op_word,      -- Operand word feeds into ALU
 
             clr_z_flag    => clr_z_flag,
             reset         => reset
         );
 
     --------------------------------------------------------------------
-    -- Debug outputs
+    -- Output Assignments
     --------------------------------------------------------------------
-    dbg_pc  <= pc_reg;
-    dbg_ir  <= ir_reg;
-    dbg_rx  <= rx_s;
-    dbg_rz  <= rz_s;
-    dbg_alu <= alu_result_s;
+    z_flag      <= z_flag_s;
+    pc_out      <= pc_reg;
+    
+    -- Debugging
+    dbg_ir_word <= ir_word;
+    dbg_op      <= op_word;
+    dbg_ir      <= ir_word & op_word; -- Combine back into 32-bit for easy viewing
+    dbg_rx      <= rx_s;
+    dbg_rz      <= rz_s;
+    dbg_alu     <= alu_result_s;
 
 end architecture;

@@ -109,7 +109,7 @@ begin
 		rx <= X"00FF";
 		rz <= X"0F0F";
 
-		alu_operation <= alu_or;
+		alu_operation <= alu_or;     
 
 		wait for 20 ns;
 
