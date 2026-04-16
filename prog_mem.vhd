@@ -88,8 +88,8 @@ BEGIN
 	GENERIC MAP (
 		clock_enable_input_a => "BYPASS",
 		clock_enable_output_a => "BYPASS",
-		init_file => "../../../../../../../Dev/Code/CS701/Recop/rawOutput.mif",
-		intended_device_family => "Cyclone II",
+		init_file => "recop_assembler/output2.mif",
+		intended_device_family => "Cyclone V",
 		lpm_hint => "ENABLE_RUNTIME_MOD=NO",
 		lpm_type => "altsyncram",
 		maximum_depth => 4096,
@@ -97,7 +97,7 @@ BEGIN
 		operation_mode => "ROM",
 		outdata_aclr_a => "NONE",
 		outdata_reg_a => "UNREGISTERED",
-		ram_block_type => "M4K",
+		ram_block_type => "AUTO",
 		widthad_a => 15,
 		width_a => 16,
 		width_byteena_a => 1

@@ -31,8 +31,10 @@ ip/
 *.rpt
 *.chg
 *.qdf
+*.qsf
 *.qpf.bak
 *.qsf.bak
+*.vhd.bak
 
 # Quartus programming/output files
 output_files/
