@@ -32,7 +32,7 @@ ENTITY control_unit IS
         alu_operation : OUT bit_3; -- select ALU operation: add, and, or, sub, subv
         alu_op1_sel : OUT bit_2; -- select ALU operand 1: Rx or Operand
         alu_op2_sel : OUT bit_1; -- select ALU operand 2: Rx or Rz
-        clr_z_flag : OUT bit_1 -- for CLFZ instruction
+        clr_z_flag : OUT bit_1; -- for CLFZ instruction
 
         -- Still required control outputs:
         -- data memory control
