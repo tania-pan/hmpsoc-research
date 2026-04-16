@@ -33,7 +33,6 @@ entity datapath is
 
         ----------------------------------------------------------------
         -- currently unused data-memory control inputs
-        -- kept here so the datapath matches the CU/top interface
         ----------------------------------------------------------------
         dm_wr         : in  bit_1;
         dm_addr_sel   : in  bit_2;
@@ -100,14 +99,13 @@ architecture rtl of datapath is
     signal sip_r_s        : bit_16;
     signal dprr_dummy_s   : bit_2 := (others => '0');
 
+    signal dm_out_s       : bit_16 := X"0000";
+    signal rz_max_s       : bit_16 := X"0000";
+
     -- program memory signals
     signal pm_addr_s      : std_logic_vector(14 downto 0);
     signal pm_q_s         : std_logic_vector(15 downto 0);
 
-	 
-	 signal dm_out_s : bit_16 := X"0000";
-	 signal rz_max_s : bit_16 := X"0000";
-	
 begin
 
     --------------------------------------------------------------------
@@ -133,9 +131,9 @@ begin
     ir_rx      <= ir_reg(19 downto 16);
     ir_operand <= ir_reg(15 downto 0);
 
-    am     <= ir_am;
-    opcode <= ir_opcode;
-    z_flag <= z_flag_s;
+    am      <= ir_am;
+    opcode  <= ir_opcode;
+    z_flag  <= z_flag_s;
     rz_zero <= '1' when rz_s = X"0000" else '0';
 
     sel_z_i <= to_integer(unsigned(ir_rz));
@@ -155,6 +153,7 @@ begin
             -- first 16-bit instruction word
             if ir_load = '1' then
                 ir_reg(31 downto 16) <= pm_q_s;
+                ir_reg(15 downto 0)  <= X"0000";
             end if;
 
             -- second 16-bit operand word
@@ -184,31 +183,30 @@ begin
     --------------------------------------------------------------------
     -- REGFILE
     --------------------------------------------------------------------
- u_regfile : entity work.regfile
-    port map (
-        clk          => clk,
-        init         => reset,
-        ld_r         => reg_write,
-        sel_z        => sel_z_i,
-        sel_x        => sel_x_i,
-        rx           => rx_s,
-        rz           => rz_s,
-        rf_input_sel => rf_input_sel,
-        ir_operand   => ir_operand,
-        dm_out       => dm_out_s,
-        aluout       => alu_result_s,
-        rz_max       => rz_max_s,
-        sip_hold     => sip_r_s,
-        er_temp      => er_dummy_s,
-        r7           => r7_s,
-        dprr_res     => dprr_dummy_s(0),
-        dprr_res_reg => dprr_dummy_s(0),
-        dprr_wren    => '0'
-    );
+    u_regfile : entity work.regfile
+        port map (
+            clk          => clk,
+            init         => reset,
+            ld_r         => reg_write,
+            sel_z        => sel_z_i,
+            sel_x        => sel_x_i,
+            rx           => rx_s,
+            rz           => rz_s,
+            rf_input_sel => rf_input_sel,
+            ir_operand   => ir_operand,
+            dm_out       => dm_out_s,
+            aluout       => alu_result_s,
+            rz_max       => rz_max_s,
+            sip_hold     => sip_r_s,
+            er_temp      => er_dummy_s,
+            r7           => r7_s,
+            dprr_res     => dprr_dummy_s(0),
+            dprr_res_reg => dprr_dummy_s(0),
+            dprr_wren    => '0'
+        );
 
     --------------------------------------------------------------------
     -- SPECIAL REGISTERS
-    -- only keeping the parts needed by the current CU wiring
     --------------------------------------------------------------------
     u_registers : entity work.registers
         port map (

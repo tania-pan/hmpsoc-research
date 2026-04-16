@@ -1,5 +1,12 @@
-; Load 10 into R1, load 20 into R2, add them into R3
 LDR R1 #10
 LDR R2 #20
 ADD R3 R1 #20
+AND R4 R2 #7
+OR R5 R4 #8
+CLFZ
 NOOP
+JMP END_LOOP
+
+END_LOOP:
+NOOP
+JMP END_LOOP

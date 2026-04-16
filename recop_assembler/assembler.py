@@ -5,13 +5,13 @@ import token
 OPCODES = {
     
     'LDR':          0b000000, 
-    'STR':          0b000001, 
+    'STR':          0b000010, 
     'JMP':          0b011000,
     'PRESENT':      0b011100,
     'AND':          0b001000,
     'OR':           0b001100,
-    'ADD':          0b000100,
-    'SUB':          0b001000,
+    'ADD':          0b111000,
+    'SUB':          0b000100,
     'SUBV':         0b000011,
     'CLFZ':         0b010000,
     'CER':          0b111100,
@@ -59,7 +59,39 @@ def first_pass(lines):
             label_name = line[:-1]
             labels[label_name] = address
         else:
-            address += 1
+            tokens = line.replace(',', ' ').split()
+
+            # determine addressing mode size
+            if len(tokens) == 1:
+                # inherent
+                address += 1
+
+            elif len(tokens) == 2:
+                # JMP target
+                target = tokens[1]
+                if target.startswith('R'):
+                    address += 1   # register mode
+                else:
+                    address += 2   # immediate/direct uses operand word
+
+            elif len(tokens) == 3:
+                operand_token = tokens[2]
+                if operand_token.startswith('#'):
+                    address += 2
+                elif operand_token.startswith('R'):
+                    address += 1
+                else:
+                    address += 2
+
+            elif len(tokens) == 4:
+                operand_token = tokens[3]
+                if operand_token.startswith('#'):
+                    address += 2
+                elif operand_token.startswith('R'):
+                    address += 1
+                else:
+                    address += 2
+
     return labels
 
 # second pass to generate machine code
@@ -85,12 +117,16 @@ def second_pass(lines, labels):
         if len(tokens) == 2:
             # format: JMP TARGET
             target = tokens[1]
-            am = AM['DIRECT']
-            if target in labels:
-                operand = labels[target]
+            if target.startswith('R'):
+                am = AM['REGISTER']
+                rx_val = parse_register(target)
             else:
-                operand = parse_immediate(target)
-                
+                am = AM['IMMEDIATE']
+                if target in labels:
+                    operand = labels[target]
+                else:
+                    operand = parse_immediate(target)
+
         elif len(tokens) == 3:
             # format: LDR R1, #10
             rz_val = parse_register(tokens[1])
@@ -101,7 +137,7 @@ def second_pass(lines, labels):
                 operand = parse_immediate(operand_token)
             elif operand_token.startswith('R'):
                 am = AM['REGISTER']
-                operand = parse_register(operand_token)
+                rx_val = parse_register(operand_token)
             else:
                 am = AM['DIRECT']
                 operand = labels.get(operand_token, 0)
@@ -117,20 +153,24 @@ def second_pass(lines, labels):
                 operand = parse_immediate(operand_token)
             elif operand_token.startswith('R'):
                 am = AM['REGISTER']
-                operand = parse_register(operand_token)
+                rx_val = parse_register(operand_token)
             else:
                 am = AM['DIRECT']
                 operand = labels.get(operand_token, 0)
         
-        # encode instruction: [am(2)][opcode(6)][rz(4)][rx(4)][operand(16)]
-        instruction = (
-                            (am << 30) | 
-                            (opcode << 24) | 
-                            (rz_val << 20) | 
-                            (rx_val << 16) | 
-                            (operand & 0xFFFF)
-)
-        machine_code.append(instruction)
+        # encode first 16-bit word: [am(2)][opcode(6)][rz(4)][rx(4)]
+        word1 = (
+            (am << 14) |
+            (opcode << 8) |
+            (rz_val << 4) |
+            (rx_val & 0xF)
+        )
+        machine_code.append(word1)
+
+        # add second 16-bit operand word only for immediate/direct
+        if am == AM['IMMEDIATE'] or am == AM['DIRECT']:
+            machine_code.append(operand & 0xFFFF)
+
     return machine_code
 
 def parse_register(token):
@@ -139,21 +179,24 @@ def parse_register(token):
 
 def parse_immediate(token):
     # token like '#20' or '#0xFF'
-    value = token[1:]
+    if token.startswith('#'):
+        value = token[1:]
+    else:
+        value = token
     return int(value, 0)  # int with base 0 handles decimal, hex 0x, binary 0b
 
-def write_mif(instructions, filename, depth=256):
+def write_mif(instructions, filename, depth=512):
     with open(filename, 'w') as f:
-        f.write(f'WIDTH=32;\n')
+        f.write(f'WIDTH=16;\n')
         f.write(f'DEPTH={depth};\n\n')
         f.write('ADDRESS_RADIX=HEX;\n')
         f.write('DATA_RADIX=HEX;\n\n')
         f.write('CONTENT BEGIN\n')
         for i, instr in enumerate(instructions):
-            f.write(f'    {i:X} : {instr:08X};\n')
+            f.write(f'    {i:X} : {instr:04X};\n')
         # Fill unused locations with 0
         for i in range(len(instructions), depth):
-            f.write(f'    {i:X} : 00000000;\n')
+            f.write(f'    {i:X} : 0000;\n')
         f.write('END;\n')
 
 def main():
@@ -166,6 +209,6 @@ def main():
     labels = first_pass(lines)
     instructions = second_pass(lines, labels)
     write_mif(instructions, output_file)
-    print(f"Assembled {len(instructions)} instructions into {output_file}")
+    print(f"Assembled {len(instructions)} words into {output_file}")
 
 main()

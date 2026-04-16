@@ -11,44 +11,51 @@ ENTITY control_unit IS
         reset : IN bit_1;
 
         -- decoded instruction fields from datapath
-        am : IN bit_2; -- adressing mode
-        opcode : IN bit_6; -- codes for instructions
-        z_flag : IN bit_1; -- SZ, SUB, SUBV, CLFZ
-        rz_zero : IN bit_1; -- PRESENT: need to know if Rz = 0
+        am : IN bit_2;
+        opcode : IN bit_6;
+        z_flag : IN bit_1;
+        rz_zero : IN bit_1;
 
         -- control outputs to datapath
-        ir_load : OUT bit_1; -- fetch first instr word
-        op_load : OUT bit_1; -- fetch second instr word for immediate/direct AMs
-        pm_addr_sel : OUT bit_1; -- select PM address: PC or PC+1 depending on AM
+        ir_load : OUT bit_1;
+        op_load : OUT bit_1;
+        pm_addr_sel : OUT bit_1; -- '0' = PC, '1' = PC+1
 
-        pc_inc : OUT bit_1; 
-        pc_step_sel : OUT bit_1; -- '0' for 1-word instruction, '1' for 2-word instruction
-        pc_load : OUT bit_1; 
-        pc_from_rx : OUT bit_1; -- JMP uses register jump target
+        pc_inc : OUT bit_1;
+        pc_step_sel : OUT bit_1; -- '0' = +1, '1' = +2
+        pc_load : OUT bit_1;
+        pc_from_rx : OUT bit_1;
 
-        reg_write : OUT bit_1; -- enable writeback to register file
-        rf_input_sel : OUT bit_3; -- select RF input: operand, dprr, alu, max, sip, er, dm
+        reg_write : OUT bit_1;
+        rf_input_sel : OUT bit_3;
 
-        alu_operation : OUT bit_3; -- select ALU operation: add, and, or, sub, subv
-        alu_op1_sel : OUT bit_2; -- select ALU operand 1: Rx or Operand
-        alu_op2_sel : OUT bit_1; -- select ALU operand 2: Rx or Rz
-        clr_z_flag : OUT bit_1; -- for CLFZ instruction
+        alu_operation : OUT bit_3;
+        alu_op1_sel : OUT bit_2;
+        alu_op2_sel : OUT bit_1;
+        clr_z_flag : OUT bit_1;
 
-        -- Still required control outputs:
         -- data memory control
-        dm_wr : OUT bit_1;          -- write enable for STR / STRPC memory store operations
-        dm_addr_sel : OUT bit_2;    -- selects the address source for memory store operations
-        dm_data_sel : OUT bit_2;    -- selects the data source for memory store operations
+        dm_wr : OUT bit_1;
+        dm_addr_sel : OUT bit_2;
+        dm_data_sel : OUT bit_2;
 
         -- special-register control
-        dpcr_wr : OUT bit_1;        -- write enable for DPCR during DATACALL
-        dpcr_lsb_sel : OUT bit_1;   -- selects whether DATACALL writes R7 or Operand into the lower half of DPCR
-        sop_wr : OUT bit_1          -- write enable for SOP during SSOP
+        dpcr_wr : OUT bit_1;
+        dpcr_lsb_sel : OUT bit_1;
+        sop_wr : OUT bit_1
     );
 END ENTITY control_unit;
 
 ARCHITECTURE state OF control_unit IS
-    TYPE state_t IS (ST_RESET, ST_FETCH, ST_DECODE, ST_EXEC);
+    TYPE state_t IS (
+        ST_RESET,
+        ST_FETCH1_ADDR,
+        ST_FETCH1_LOAD,
+        ST_DECODE,
+        ST_FETCH2_ADDR,
+        ST_FETCH2_LOAD,
+        ST_EXEC
+    );
     SIGNAL state, next_state : state_t;
 BEGIN
 
@@ -69,7 +76,7 @@ BEGIN
     --------------------------------------------------------------------
     PROCESS (state, opcode, am, z_flag, rz_zero)
     BEGIN
-        -- DEFAULTS
+        -- defaults
         next_state <= state;
 
         ir_load <= '0';
@@ -99,66 +106,78 @@ BEGIN
         sop_wr <= '0';
 
         CASE state IS
-            WHEN ST_RESET =>
-                next_state <= ST_FETCH;
 
-            WHEN ST_FETCH =>
-                -- fetch first 16-bit instruction word from PM[PC]
-                pm_addr_sel <= '0';
-                ir_load <= '1';
+            ----------------------------------------------------------------
+            -- RESET
+            ----------------------------------------------------------------
+            WHEN ST_RESET =>
+                next_state <= ST_FETCH1_ADDR;
+
+            ----------------------------------------------------------------
+            -- FETCH FIRST WORD: PRESENT ADDRESS
+            ----------------------------------------------------------------
+            WHEN ST_FETCH1_ADDR =>
+                pm_addr_sel <= '0';   -- PC
+                next_state <= ST_FETCH1_LOAD;
+
+            ----------------------------------------------------------------
+            -- FETCH FIRST WORD: LATCH DATA
+            ----------------------------------------------------------------
+            WHEN ST_FETCH1_LOAD =>
+                pm_addr_sel <= '0';   -- still PC
+                ir_load <= '1';       -- latch first 16-bit word
                 next_state <= ST_DECODE;
 
+            ----------------------------------------------------------------
+            -- DECODE
+            ----------------------------------------------------------------
             WHEN ST_DECODE =>
-                -- immediate/direct instructions need a second 16-bit operand word
                 IF am = am_immediate OR am = am_direct THEN
-                    pm_addr_sel <= '1';
-                    op_load <= '1';
-                    next_state <= ST_EXEC;
+                    next_state <= ST_FETCH2_ADDR;
                 ELSE
                     next_state <= ST_EXEC;
                 END IF;
 
+            ----------------------------------------------------------------
+            -- FETCH SECOND WORD: PRESENT ADDRESS
+            ----------------------------------------------------------------
+            WHEN ST_FETCH2_ADDR =>
+                pm_addr_sel <= '1';   -- PC + 1
+                next_state <= ST_FETCH2_LOAD;
+
+            ----------------------------------------------------------------
+            -- FETCH SECOND WORD: LATCH DATA
+            ----------------------------------------------------------------
+            WHEN ST_FETCH2_LOAD =>
+                pm_addr_sel <= '1';   -- still PC + 1
+                op_load <= '1';       -- latch operand word
+                next_state <= ST_EXEC;
+
+            ----------------------------------------------------------------
+            -- EXECUTE
+            ----------------------------------------------------------------
             WHEN ST_EXEC =>
-                next_state <= ST_FETCH;
-
-                -- rf_input_sel meanings:
-                -- rf_from_operand = "000" = operand / ir_operand
-                -- rf_from_dprr    = "001" = DPRR result bit
-                -- rf_from_alu     = "011" = ALU output
-                -- rf_from_max     = "100" = MAX output
-                -- rf_from_sip     = "101" = SIP hold
-                -- rf_from_er      = "110" = ER
-                -- rf_from_dm      = "111" = data memory output
-
-                -- ALU input select meanings:
-                -- alu_op1_sel:
-                -- "00" = Rx
-                -- "01" = Operand
-                --
-                -- alu_op2_sel:
-                -- '0' = Rx
-                -- '1' = Rz
+                next_state <= ST_FETCH1_ADDR;
 
                 CASE opcode IS
-                    ----------------------------------------------------------------
+
+                    --------------------------------------------------------
                     -- NOOP
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN noop =>
                         pc_inc <= '1';
                         pc_step_sel <= '0';
 
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     -- JMP
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN jmp =>
                         CASE am IS
                             WHEN am_immediate =>
-                                -- JMP Operand
                                 pc_load <= '1';
                                 pc_from_rx <= '0';
 
                             WHEN am_register =>
-                                -- JMP Rx
                                 pc_load <= '1';
                                 pc_from_rx <= '1';
 
@@ -166,34 +185,26 @@ BEGIN
                                 NULL;
                         END CASE;
 
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     -- LDR
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN ldr =>
                         CASE am IS
                             WHEN am_immediate =>
-                                -- LDR Rz #Operand: write fetched operand into Rz
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_operand;
-
                                 pc_inc <= '1';
                                 pc_step_sel <= '1';
 
                             WHEN am_register =>
-                                -- LDR Rz Rx: write data memory output into Rz
-                                -- ASSUMPTION: datapath uses Rx as DM address source for register AM
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_dm;
-
                                 pc_inc <= '1';
                                 pc_step_sel <= '0';
 
                             WHEN am_direct =>
-                                -- LDR Rz $Operand: write data memory output into Rz
-                                -- ASSUMPTION: datapath uses operand word as DM address source for direct AM
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_dm;
-
                                 pc_inc <= '1';
                                 pc_step_sel <= '1';
 
@@ -201,17 +212,15 @@ BEGIN
                                 NULL;
                         END CASE;
 
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     -- ADD
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN addr =>
                         CASE am IS
                             WHEN am_immediate =>
-                                -- ADD Rz Rx Operand
-                                -- Rz = Rx + Operand
                                 alu_operation <= alu_add;
-                                alu_op1_sel <= "01"; -- Operand
-                                alu_op2_sel <= '0';  -- Rx
+                                alu_op1_sel <= "01"; -- operand
+                                alu_op2_sel <= '0';  -- rx
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -220,11 +229,9 @@ BEGIN
                                 pc_step_sel <= '1';
 
                             WHEN am_register =>
-                                -- ADD Rz Rz Rx
-                                -- Rz = Rz + Rx
                                 alu_operation <= alu_add;
-                                alu_op1_sel <= "00"; -- Rx
-                                alu_op2_sel <= '1';  -- Rz
+                                alu_op1_sel <= "00"; -- rx
+                                alu_op2_sel <= '1';  -- rz
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -236,17 +243,15 @@ BEGIN
                                 NULL;
                         END CASE;
 
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     -- AND
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN andr =>
                         CASE am IS
                             WHEN am_immediate =>
-                                -- AND Rz Rx Operand
-                                -- Rz = Rx AND Operand
                                 alu_operation <= alu_and;
-                                alu_op1_sel <= "01"; -- Operand
-                                alu_op2_sel <= '0';  -- Rx
+                                alu_op1_sel <= "01"; -- operand
+                                alu_op2_sel <= '0';  -- rx
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -255,11 +260,9 @@ BEGIN
                                 pc_step_sel <= '1';
 
                             WHEN am_register =>
-                                -- AND Rz Rz Rx
-                                -- Rz = Rz AND Rx
                                 alu_operation <= alu_and;
-                                alu_op1_sel <= "00"; -- Rx
-                                alu_op2_sel <= '1';  -- Rz
+                                alu_op1_sel <= "00"; -- rx
+                                alu_op2_sel <= '1';  -- rz
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -271,17 +274,15 @@ BEGIN
                                 NULL;
                         END CASE;
 
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     -- OR
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
                     WHEN orr =>
                         CASE am IS
                             WHEN am_immediate =>
-                                -- OR Rz Rx Operand
-                                -- Rz = Rx OR Operand
                                 alu_operation <= alu_or;
-                                alu_op1_sel <= "01"; -- Operand
-                                alu_op2_sel <= '0';  -- Rx
+                                alu_op1_sel <= "01"; -- operand
+                                alu_op2_sel <= '0';  -- rx
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -290,11 +291,9 @@ BEGIN
                                 pc_step_sel <= '1';
 
                             WHEN am_register =>
-                                -- OR Rz Rz Rx
-                                -- Rz = Rz OR Rx
                                 alu_operation <= alu_or;
-                                alu_op1_sel <= "00"; -- Rx
-                                alu_op2_sel <= '1';  -- Rz
+                                alu_op1_sel <= "00"; -- rx
+                                alu_op2_sel <= '1';  -- rz
 
                                 reg_write <= '1';
                                 rf_input_sel <= rf_from_alu;
@@ -306,65 +305,17 @@ BEGIN
                                 NULL;
                         END CASE;
 
-                    ----------------------------------------------------------------
-                    -- CFLZ
-                    ----------------------------------------------------------------
+                    --------------------------------------------------------
+                    -- CLFZ
+                    --------------------------------------------------------
                     WHEN clfz =>
                         clr_z_flag <= '1';
                         pc_inc <= '1';
                         pc_step_sel <= '0';
 
-                    ----------------------------------------------------------------
-                    -- STR
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- SUBV
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- SUB
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- PRESENT
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- DATACALL
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- SZ
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- LSIP
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- SSOP
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- STRPC
-                    ----------------------------------------------------------------
-
-                    ----------------------------------------------------------------
-                    -- Completed:
-                    -- NOOP, JMP, LDR, ADD, AND, OR, CLFZ
-                    --
-                    -- Still required:
-                    -- STR, SUBV, SUB, PRESENT, DATACALL, SZ, LSIP, SSOP, STRPC, 
-                    --
-                    -- Red slides (not required):
-                    -- CER, CEOT, SEOT, LER, SSVOP, MAX
-                    --
-                    -- Not in assignment slides:
-                    -- SRES
-                    --
-                    ----------------------------------------------------------------
-
+                    --------------------------------------------------------
+                    -- unimplemented instructions for now
+                    --------------------------------------------------------
                     WHEN OTHERS =>
                         NULL;
                 END CASE;

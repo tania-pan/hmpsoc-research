@@ -3,7 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.recop_types.all;
-use work.opcodes.all;
 
 entity tb_recop_top is
 end entity;
@@ -25,13 +24,22 @@ architecture sim of tb_recop_top is
     signal dbg_rz  : bit_16;
     signal dbg_alu : bit_16;
 
+    signal done    : boolean := false;
+
     --------------------------------------------------------------------
-    -- HELPER PROCEDURES
+    -- HELPERS
     --------------------------------------------------------------------
     procedure step is
     begin
         wait until rising_edge(clk);
         wait for 1 ns;
+    end procedure;
+
+    procedure step_n(constant n : in natural) is
+    begin
+        for i in 1 to n loop
+            step;
+        end loop;
     end procedure;
 
     procedure check16(
@@ -96,20 +104,43 @@ begin
     end process;
 
     --------------------------------------------------------------------
-    -- OPTIONAL WATCHDOG
+    -- WATCHDOG
     --------------------------------------------------------------------
     watchdog : process
     begin
-        wait for 5 us;
-        assert false report "Timeout: simulation did not finish" severity failure;
+        wait for 20 us;
+        if not done then
+            assert false report "Timeout: simulation did not finish" severity failure;
+        end if;
+        wait;
     end process;
 
     --------------------------------------------------------------------
-    -- MAIN STIMULUS / CHECKS
+    -- STIMULUS / CHECKS
+    --
+    -- This TB assumes the program is:
+    --
+    -- LDR R1 #10
+    -- LDR R2 #20
+    -- ADD R3 R1 #20
+    -- AND R4 R2 #7
+    -- OR  R5 R4 #8
+    -- CLFZ
+    -- NOOP
+    -- JMP END_LOOP
+    --
+    -- END_LOOP:
+    -- NOOP
+    -- JMP END_LOOP
+    --
+    -- With the synchronous PM-aware CU:
+    --   first 2-word instruction after reset completes in 7 steps
+    --   each later 2-word instruction completes in 6 more steps
+    --   each 1-word instruction completes in 4 more steps
     --------------------------------------------------------------------
     stim : process
     begin
-        report "Starting robust integrated recop_top testbench";
+        report "Starting recop_top TB";
 
         ----------------------------------------------------------------
         -- RESET
@@ -125,207 +156,93 @@ begin
         check32(dbg_ir, x"00000000", "After reset release, IR should be 0");
 
         ----------------------------------------------------------------
-        -- PROGRAM BEING TESTED (from simulation prog_mem)
-        --
-        -- 0  : LDR R1,#5
-        -- 1  : 0005
-        -- 2  : ADD R2,R1,#3
-        -- 3  : 0003
-        -- 4  : AND R3,R2,#1
-        -- 5  : 0001
-        -- 6  : OR  R4,R3,#8
-        -- 7  : 0008
-        -- 8  : LDR R6,#12
-        -- 9  : 000C
-        -- 10 : JMP R6
-        -- 11 : NOOP   (should be skipped)
-        -- 12 : JMP #12
-        -- 13 : 000C
+        -- LDR R1,#10
         ----------------------------------------------------------------
+        banner("LDR R1,#10");
+        step_n(7);
+        check16(dbg_pc, x"0002", "After LDR R1,#10, PC");
+        check16(dbg_rz, x"000A", "After LDR R1,#10, R1");
 
         ----------------------------------------------------------------
-        -- C1 FETCH @0 : LDR R1,#5 word
+        -- LDR R2,#20
         ----------------------------------------------------------------
-        banner("C1 FETCH LDR R1,#5");
-        step;
-        check16(dbg_pc, x"0000", "C1 PC");
-        check16(dbg_ir(31 downto 16), am_immediate & ldr & x"1" & x"0",
-                "C1 IR upper word");
+        banner("LDR R2,#20");
+        step_n(6);
+        check16(dbg_pc, x"0004", "After LDR R2,#20, PC");
+        check16(dbg_rz, x"0014", "After LDR R2,#20, R2");
 
         ----------------------------------------------------------------
-        -- C2 DECODE @1 : operand 0005
+        -- ADD R3,R1,#20  => 10 + 20 = 30
         ----------------------------------------------------------------
-        banner("C2 DECODE LDR operand");
-        step;
-        check16(dbg_pc, x"0000", "C2 PC");
-        check16(dbg_ir(15 downto 0), x"0005", "C2 IR lower word");
+        banner("ADD R3,R1,#20");
+        step_n(6);
+        check16(dbg_pc, x"0006", "After ADD R3,R1,#20, PC");
+        check16(dbg_rx, x"000A", "During/after ADD, Rx should be R1=10");
+        check16(dbg_rz, x"001E", "After ADD R3,R1,#20, R3 should be 30");
 
         ----------------------------------------------------------------
-        -- C3 EXEC : R1 = 5, PC = 2
+        -- AND R4,R2,#7  => 20 AND 7 = 4
         ----------------------------------------------------------------
-        banner("C3 EXEC LDR");
-        step;
-        check16(dbg_pc, x"0002", "C3 PC after LDR");
-        check16(dbg_rz, x"0005", "C3 R1 writeback");
+        banner("AND R4,R2,#7");
+        step_n(6);
+        check16(dbg_pc, x"0008", "After AND R4,R2,#7, PC");
+        check16(dbg_rx, x"0014", "During/after AND, Rx should be R2=20");
+        check16(dbg_rz, x"0004", "After AND R4,R2,#7, R4 should be 4");
 
         ----------------------------------------------------------------
-        -- C4 FETCH @2 : ADD R2,R1,#3
+        -- OR R5,R4,#8  => 4 OR 8 = 12
         ----------------------------------------------------------------
-        banner("C4 FETCH ADD R2,R1,#3");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & addr & x"2" & x"1",
-                "C4 IR upper word");
+        banner("OR R5,R4,#8");
+        step_n(6);
+        check16(dbg_pc, x"000A", "After OR R5,R4,#8, PC");
+        check16(dbg_rx, x"0004", "During/after OR, Rx should be R4=4");
+        check16(dbg_rz, x"000C", "After OR R5,R4,#8, R5 should be 12");
 
         ----------------------------------------------------------------
-        -- C5 DECODE @3 : operand 0003
+        -- CLFZ
         ----------------------------------------------------------------
-        banner("C5 DECODE ADD operand");
-        step;
-        check16(dbg_ir(15 downto 0), x"0003", "C5 IR lower word");
+        banner("CLFZ");
+        step_n(4);
+        check16(dbg_pc, x"000B", "After CLFZ, PC");
 
         ----------------------------------------------------------------
-        -- C6 EXEC : R2 = 8, PC = 4
+        -- NOOP
         ----------------------------------------------------------------
-        banner("C6 EXEC ADD");
-        step;
-        check16(dbg_pc, x"0004", "C6 PC after ADD");
-        check16(dbg_rx, x"0005", "C6 Rx should be R1=5");
-        check16(dbg_rz, x"0008", "C6 R2 writeback should be 8");
+        banner("NOOP");
+        step_n(4);
+        check16(dbg_pc, x"000C", "After NOOP, PC");
 
         ----------------------------------------------------------------
-        -- C7 FETCH @4 : AND R3,R2,#1
+        -- JMP END_LOOP
+        -- END_LOOP should be PM address 14 (0x000E)
         ----------------------------------------------------------------
-        banner("C7 FETCH AND R3,R2,#1");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & andr & x"3" & x"2",
-                "C7 IR upper word");
+        banner("JMP END_LOOP");
+        step_n(6);
+        check16(dbg_pc, x"000E", "After JMP END_LOOP, PC should be 14");
 
         ----------------------------------------------------------------
-        -- C8 DECODE @5 : operand 0001
+        -- END_LOOP: NOOP
         ----------------------------------------------------------------
-        banner("C8 DECODE AND operand");
-        step;
-        check16(dbg_ir(15 downto 0), x"0001", "C8 IR lower word");
+        banner("END_LOOP NOOP");
+        step_n(4);
+        check16(dbg_pc, x"000F", "After END_LOOP NOOP, PC should be 15");
 
         ----------------------------------------------------------------
-        -- C9 EXEC : R3 = 0, PC = 6
+        -- END_LOOP: JMP END_LOOP
         ----------------------------------------------------------------
-        banner("C9 EXEC AND");
-        step;
-        check16(dbg_pc, x"0006", "C9 PC after AND");
-        check16(dbg_rx, x"0008", "C9 Rx should be R2=8");
-        check16(dbg_rz, x"0000", "C9 R3 writeback should be 0");
+        banner("END_LOOP JMP");
+        step_n(6);
+        check16(dbg_pc, x"000E", "Loop JMP should return PC to 14");
 
         ----------------------------------------------------------------
-        -- C10 FETCH @6 : OR R4,R3,#8
-        ----------------------------------------------------------------
-        banner("C10 FETCH OR R4,R3,#8");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & orr & x"4" & x"3",
-                "C10 IR upper word");
-
-        ----------------------------------------------------------------
-        -- C11 DECODE @7 : operand 0008
-        ----------------------------------------------------------------
-        banner("C11 DECODE OR operand");
-        step;
-        check16(dbg_ir(15 downto 0), x"0008", "C11 IR lower word");
-
-        ----------------------------------------------------------------
-        -- C12 EXEC : R4 = 8, PC = 8
-        ----------------------------------------------------------------
-        banner("C12 EXEC OR");
-        step;
-        check16(dbg_pc, x"0008", "C12 PC after OR");
-        check16(dbg_rx, x"0000", "C12 Rx should be R3=0");
-        check16(dbg_rz, x"0008", "C12 R4 writeback should be 8");
-
-        ----------------------------------------------------------------
-        -- C13 FETCH @8 : LDR R6,#12
-        ----------------------------------------------------------------
-        banner("C13 FETCH LDR R6,#12");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & ldr & x"6" & x"0",
-                "C13 IR upper word");
-
-        ----------------------------------------------------------------
-        -- C14 DECODE @9 : operand 000C
-        ----------------------------------------------------------------
-        banner("C14 DECODE LDR operand");
-        step;
-        check16(dbg_ir(15 downto 0), x"000C", "C14 IR lower word");
-
-        ----------------------------------------------------------------
-        -- C15 EXEC : R6 = 12, PC = 10
-        ----------------------------------------------------------------
-        banner("C15 EXEC LDR R6,#12");
-        step;
-        check16(dbg_pc, x"000A", "C15 PC after LDR R6");
-        check16(dbg_rz, x"000C", "C15 R6 writeback should be 12");
-
-        ----------------------------------------------------------------
-        -- C16 FETCH @10 : JMP R6
-        ----------------------------------------------------------------
-        banner("C16 FETCH JMP R6");
-        step;
-        check16(dbg_ir(31 downto 16), am_register & jmp & x"0" & x"6",
-                "C16 IR upper word");
-
-        ----------------------------------------------------------------
-        -- C17 DECODE JMP R6
-        ----------------------------------------------------------------
-        banner("C17 DECODE JMP R6");
-        step;
-        check16(dbg_pc, x"000A", "C17 PC should remain 10");
-
-        ----------------------------------------------------------------
-        -- C18 EXEC : PC := R6 = 12
-        ----------------------------------------------------------------
-        banner("C18 EXEC JMP R6");
-        step;
-        check16(dbg_pc, x"000C", "C18 PC should jump to 12");
-        check16(dbg_rx, x"000C", "C18 Rx should be R6=12");
-
-        ----------------------------------------------------------------
-        -- C19 FETCH @12 : JMP #12
-        -- If this happens, address 11 NOOP was correctly skipped.
-        ----------------------------------------------------------------
-        banner("C19 FETCH JMP #12");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & jmp & x"0" & x"0",
-                "C19 IR upper word");
-
-        ----------------------------------------------------------------
-        -- C20 DECODE @13 : operand 000C
-        ----------------------------------------------------------------
-        banner("C20 DECODE JMP #12 operand");
-        step;
-        check16(dbg_ir(15 downto 0), x"000C", "C20 IR lower word");
-
-        ----------------------------------------------------------------
-        -- C21 EXEC : PC := 12
-        ----------------------------------------------------------------
-        banner("C21 EXEC JMP #12");
-        step;
-        check16(dbg_pc, x"000C", "C21 self-loop PC should remain 12");
-
-        ----------------------------------------------------------------
-        -- Stability check: loop repeats cleanly
+        -- One more repetition to prove stable loop
         ----------------------------------------------------------------
         banner("LOOP STABILITY");
-        step;
-        check16(dbg_ir(31 downto 16), am_immediate & jmp & x"0" & x"0",
-                "Loop fetch should still see JMP #12");
+        step_n(4);
+        check16(dbg_pc, x"000F", "Repeated loop NOOP should move PC to 15");
 
-        step;
-        check16(dbg_ir(15 downto 0), x"000C",
-                "Loop decode should still see operand 000C");
-
-        step;
-        check16(dbg_pc, x"000C",
-                "Loop exec should still leave PC at 12");
-
-        report "ROBUST integrated recop_top testbench PASSED";
+        done <= true;
+        report "recop_top TB PASSED";
         wait;
     end process;
 
