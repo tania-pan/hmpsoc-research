@@ -35,6 +35,8 @@ ARCHITECTURE sim OF tb_control_unit IS
 
     SIGNAL clr_z_flag : bit_1;
 
+    SIGNAL rz_zero : bit_1 := '0';
+
     CONSTANT CLK_PERIOD : TIME := 10 ns;
 
 BEGIN
@@ -49,6 +51,7 @@ BEGIN
             am => am,
             opcode => opcode,
             z_flag => z_flag,
+            rz_zero => rz_zero,
 
             ir_load => ir_load,
             op_load => op_load,
