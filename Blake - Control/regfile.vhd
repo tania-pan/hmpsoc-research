@@ -33,8 +33,22 @@ entity regfile is
 		r7 : out bit_16;
 		dprr_res : in bit_1;
 		dprr_res_reg : in bit_1;
-		dprr_wren : in bit_1
-				
+		dprr_wren : in bit_1;
+		
+		-- REG DEBUG SGLS
+		r1_dbg  : out bit_16;
+		r2_dbg  : out bit_16;
+		r3_dbg  : out bit_16;
+		r5_dbg  : out bit_16;
+		r6_dbg  : out bit_16;
+		r7_dbg  : out bit_16;
+		r8_dbg  : out bit_16;
+		r9_dbg  : out bit_16;
+		r11_dbg : out bit_16;
+		r13_dbg : out bit_16;
+		r14_dbg : out bit_16;
+		r15_dbg : out bit_16
+						
 		);
 end regfile;
 
@@ -86,6 +100,19 @@ begin
 	rx <= regs(sel_x);
 	rz <= regs(sel_z);
 
+	
+	r1_dbg  <= regs(1);
+	r2_dbg  <= regs(2);
+	r3_dbg  <= regs(3);
+	r5_dbg  <= regs(5);
+	r6_dbg  <= regs(6);	
+	r7_dbg  <= regs(7);
+	r8_dbg  <= regs(8);
+	r9_dbg  <= regs(9);
+	r11_dbg <= regs(11);
+	r13_dbg <= regs(13);
+	r14_dbg <= regs(14);
+	r15_dbg <= regs(15);
 
 	
 end beh;

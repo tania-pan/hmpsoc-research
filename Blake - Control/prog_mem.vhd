@@ -88,7 +88,7 @@ BEGIN
 	GENERIC MAP (
 		clock_enable_input_a => "BYPASS",
 		clock_enable_output_a => "BYPASS",
-		init_file => "C:\Users\byul423\Downloads\hmpsoc-research\recop_assembler\output2.mif",
+		init_file => "C:\Users\byul423\Downloads\hmpsoc-research\recop_assembler\output1.mif",
 		intended_device_family => "Cyclone V",
 		lpm_hint => "ENABLE_RUNTIME_MOD=NO",
 		lpm_type => "altsyncram",

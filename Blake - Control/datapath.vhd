@@ -11,9 +11,6 @@ entity datapath is
         clk           : in  bit_1;
         reset         : in  bit_1;
 
-        ----------------------------------------------------------------
-        -- control signals from control unit
-        ----------------------------------------------------------------
         ir_load       : in  bit_1;
         op_load       : in  bit_1;
         pm_addr_sel   : in  bit_1;
@@ -31,43 +28,41 @@ entity datapath is
         alu_op2_sel   : in  bit_1;
         clr_z_flag    : in  bit_1;
 
-        ----------------------------------------------------------------
-        -- currently unused data-memory control inputs
-        ----------------------------------------------------------------
         dm_wr         : in  bit_1;
         dm_addr_sel   : in  bit_2;
         dm_data_sel   : in  bit_2;
 
-        ----------------------------------------------------------------
-        -- special-register control
-        ----------------------------------------------------------------
         dpcr_lsb_sel  : in  bit_1;
         dpcr_wr       : in  bit_1;
         sop_wr        : in  bit_1;
 
-        ----------------------------------------------------------------
-        -- External I/O for the FPGA Board
-        ----------------------------------------------------------------
         sip           : in  bit_16;
         sop           : out bit_16;
         dpcr          : out bit_32;
 
-        ----------------------------------------------------------------
-        -- decoded/status fields out to control unit
-        ----------------------------------------------------------------
         am            : out bit_2;
         opcode        : out bit_6;
         z_flag        : out bit_1;
         rz_zero       : out bit_1;
 
-        ----------------------------------------------------------------
-        -- debug outputs
-        ----------------------------------------------------------------
         dbg_pc        : out bit_16;
         dbg_ir        : out bit_32;
         dbg_rx        : out bit_16;
         dbg_rz        : out bit_16;
-        dbg_alu       : out bit_16
+        dbg_alu       : out bit_16;
+
+        dbg_r1        : out bit_16;
+        dbg_r2        : out bit_16;
+        dbg_r3        : out bit_16;
+        dbg_r5        : out bit_16;
+        dbg_r6        : out bit_16;
+        dbg_r7        : out bit_16;
+        dbg_r8        : out bit_16;
+        dbg_r9        : out bit_16;
+        dbg_r11       : out bit_16;
+        dbg_r13       : out bit_16;
+        dbg_r14       : out bit_16;
+        dbg_r15       : out bit_16
     );
 end entity;
 
@@ -91,7 +86,12 @@ architecture rtl of datapath is
     signal alu_result_s   : bit_16;
     signal z_flag_s       : bit_1;
 
-    -- register block connections
+    -- DATA MEMORY SIGNALS
+    signal dm_addr_s      : std_logic_vector(11 downto 0);
+    signal dm_data_s      : std_logic_vector(15 downto 0);
+    signal dm_q_s         : std_logic_vector(15 downto 0);
+    signal dm_out_s       : bit_16;
+
     signal r7_s           : bit_16;
     signal er_dummy_s     : bit_1;
     signal eot_dummy_s    : bit_1;
@@ -99,15 +99,27 @@ architecture rtl of datapath is
     signal sip_r_s        : bit_16;
     signal dprr_dummy_s   : bit_2 := (others => '0');
 
-    signal dm_out_s       : bit_16 := X"0000";
     signal rz_max_s       : bit_16 := X"0000";
 
-    -- program memory signals
     signal pm_addr_s      : std_logic_vector(14 downto 0);
     signal pm_q_s         : std_logic_vector(15 downto 0);
 
-begin
+    -- fixed register debug signals
+    signal dbg_r1_s       : bit_16;
+    signal dbg_r2_s       : bit_16;
+    signal dbg_r3_s       : bit_16;
+    signal dbg_r5_s       : bit_16;
+    signal dbg_r6_s       : bit_16;
+    signal dbg_r7_s       : bit_16;
+    signal dbg_r8_s       : bit_16;
+    signal dbg_r9_s       : bit_16;
+    signal dbg_r11_s      : bit_16;
+    signal dbg_r13_s      : bit_16;
+    signal dbg_r14_s      : bit_16;
+    signal dbg_r15_s      : bit_16;
 
+begin
+	
     --------------------------------------------------------------------
     -- PROGRAM MEMORY
     --------------------------------------------------------------------
@@ -121,6 +133,57 @@ begin
     pm_addr_s <= std_logic_vector(unsigned(pc_reg(14 downto 0)) + 1)
                  when pm_addr_sel = '1'
                  else std_logic_vector(pc_reg(14 downto 0));
+
+    --------------------------------------------------------------------
+    -- DATA MEMORY
+    --------------------------------------------------------------------
+    u_data_mem : entity work.data_mem
+        port map (
+            address => dm_addr_s,
+            clock   => clk,
+            data    => dm_data_s,
+            wren    => dm_wr,
+            q       => dm_q_s
+        );
+
+    dm_out_s <= bit_16(dm_q_s);
+
+    -- address mux
+    with dm_addr_sel select
+        dm_addr_s <= std_logic_vector(rz_s(11 downto 0))        when "00",
+                     std_logic_vector(rx_s(11 downto 0))        when "01",
+                     std_logic_vector(ir_operand(11 downto 0))  when "10",
+                     (others => '0')                           when others;
+							
+    -- data mux (write data)
+    with dm_data_sel select
+        dm_data_s <= std_logic_vector(ir_operand) when "00",
+                     std_logic_vector(rx_s)       when "01",
+                     std_logic_vector(pc_reg)     when "10",
+                     (others => '0')              when others;
+	
+
+	--------------------------------------------------------------------
+    -- ALU
+    --------------------------------------------------------------------
+    u_alu : entity work.alu
+        port map (
+            clk           => clk,
+            z_flag        => z_flag_s,
+            alu_operation => alu_operation,
+            alu_op1_sel   => alu_op1_sel,
+            alu_op2_sel   => alu_op2_sel,
+            alu_carry     => '0',
+            alu_result    => alu_result_s,
+
+            rx            => rx_s,
+            rz            => rz_s,
+            ir_operand    => ir_operand,
+
+            clr_z_flag    => clr_z_flag,
+            reset         => reset
+        );
+
 
     --------------------------------------------------------------------
     -- IR DECODE
@@ -150,23 +213,20 @@ begin
 
         elsif rising_edge(clk) then
 
-            -- first 16-bit instruction word
             if ir_load = '1' then
                 ir_reg(31 downto 16) <= pm_q_s;
                 ir_reg(15 downto 0)  <= X"0000";
             end if;
 
-            -- second 16-bit operand word
             if op_load = '1' then
                 ir_reg(15 downto 0) <= pm_q_s;
             end if;
 
-            -- PC update
             if pc_load = '1' then
                 if pc_from_rx = '1' then
-                    pc_reg <= rx_s;         -- JMP Rx
+                    pc_reg <= rx_s;
                 else
-                    pc_reg <= ir_operand;   -- JMP #addr
+                    pc_reg <= ir_operand;
                 end if;
 
             elsif pc_inc = '1' then
@@ -202,8 +262,21 @@ begin
             r7           => r7_s,
             dprr_res     => dprr_dummy_s(0),
             dprr_res_reg => dprr_dummy_s(0),
-            dprr_wren    => '0'
+            dprr_wren    => '0',
+				r1_dbg  => dbg_r1_s,
+				r2_dbg  => dbg_r2_s,
+				r3_dbg  => dbg_r3_s,
+				r5_dbg  => dbg_r5_s,
+				r6_dbg  => dbg_r6_s,
+				r7_dbg  => dbg_r7_s,
+				r8_dbg  => dbg_r8_s,
+				r9_dbg  => dbg_r9_s,
+				r11_dbg => dbg_r11_s,
+				r13_dbg => dbg_r13_s,
+				r14_dbg => dbg_r14_s,
+				r15_dbg => dbg_r15_s
         );
+
 
     --------------------------------------------------------------------
     -- SPECIAL REGISTERS
@@ -245,27 +318,6 @@ begin
         );
 
     --------------------------------------------------------------------
-    -- ALU
-    --------------------------------------------------------------------
-    u_alu : entity work.alu
-        port map (
-            clk           => clk,
-            z_flag        => z_flag_s,
-            alu_operation => alu_operation,
-            alu_op1_sel   => alu_op1_sel,
-            alu_op2_sel   => alu_op2_sel,
-            alu_carry     => '0',
-            alu_result    => alu_result_s,
-
-            rx            => rx_s,
-            rz            => rz_s,
-            ir_operand    => ir_operand,
-
-            clr_z_flag    => clr_z_flag,
-            reset         => reset
-        );
-
-    --------------------------------------------------------------------
     -- DEBUG
     --------------------------------------------------------------------
     dbg_pc  <= pc_reg;
@@ -273,5 +325,20 @@ begin
     dbg_rx  <= rx_s;
     dbg_rz  <= rz_s;
     dbg_alu <= alu_result_s;
+	 
+	 
+	 dbg_r1  <= dbg_r1_s;
+	dbg_r2  <= dbg_r2_s;
+	dbg_r3  <= dbg_r3_s;
+	dbg_r5  <= dbg_r5_s;
+	dbg_r6  <= dbg_r6_s;
+	dbg_r7  <= dbg_r7_s;
+	dbg_r8  <= dbg_r8_s;
+	dbg_r9  <= dbg_r9_s;
+	dbg_r11 <= dbg_r11_s;
+	dbg_r13 <= dbg_r13_s;
+	dbg_r14 <= dbg_r14_s;
+	dbg_r15 <= dbg_r15_s;
 
 end architecture;
+

@@ -1,5 +1,6 @@
-; Count R1 up from 0 forever
-LDR R1 #0
+LDR R1 #10
+LDR R2 #20
+ADD R3 R2 #5
+NOOP
 LOOP:
-ADD R1 R1 #1
 JMP LOOP
