@@ -5,20 +5,19 @@ use work.recop_types.all;
 
 entity recop_top is
     port (
-        clk      : in  bit_1;
-        reset    : in  bit_1;
+        clk       : in  bit_1;
+        reset     : in  bit_1;
 
-        -- debug outputs
-        dbg_pc   : out bit_16;
-        dbg_ir   : out bit_32;
-        dbg_rx   : out bit_16;
-        dbg_rz   : out bit_16;
-        dbg_alu  : out bit_16;
-          
-        -- External I/O for the FPGA Board
-        sip      : in  bit_16;
-        sop      : out bit_16;
-        dpcr     : out bit_32
+        -- external board I/O
+        sip       : in  bit_16;
+        sop       : out bit_16;
+        dpcr      : out bit_32;
+
+        -- choose which internal signal to view
+        debug_sel : in  std_logic_vector(3 downto 0);
+
+        -- one muxed debug bus for LEDs / HEX display logic
+        debug_bus : out bit_16
     );
 end entity;
 
@@ -46,15 +45,33 @@ architecture rtl of recop_top is
     signal alu_op2_sel_s   : bit_1;
     signal clr_z_flag_s    : bit_1;
 
-    -- data memory control (currently unused inside datapath)
     signal dm_wr_s         : bit_1;
     signal dm_addr_sel_s   : bit_2;
     signal dm_data_sel_s   : bit_2;
 
-    -- special register control
     signal dpcr_wr_s       : bit_1;
     signal dpcr_lsb_sel_s  : bit_1;
     signal sop_wr_s        : bit_1;
+
+    -- internal debug signals from datapath
+    signal dbg_pc_s        : bit_16;
+    signal dbg_ir_s        : bit_32;
+    signal dbg_rx_s        : bit_16;
+    signal dbg_rz_s        : bit_16;
+    signal dbg_alu_s       : bit_16;
+
+    signal dbg_r1_s        : bit_16;
+    signal dbg_r2_s        : bit_16;
+    signal dbg_r3_s        : bit_16;
+    signal dbg_r5_s        : bit_16;
+    signal dbg_r6_s        : bit_16;
+    signal dbg_r7_s        : bit_16;
+    signal dbg_r8_s        : bit_16;
+    signal dbg_r9_s        : bit_16;
+    signal dbg_r11_s       : bit_16;
+    signal dbg_r13_s       : bit_16;
+    signal dbg_r14_s       : bit_16;
+    signal dbg_r15_s       : bit_16;
 
 begin
 
@@ -133,11 +150,44 @@ begin
             z_flag        => z_flag_s,
             rz_zero       => rz_zero_s,
 
-            dbg_pc        => dbg_pc,
-            dbg_ir        => dbg_ir,
-            dbg_rx        => dbg_rx,
-            dbg_rz        => dbg_rz,
-            dbg_alu       => dbg_alu
+            dbg_pc        => dbg_pc_s,
+            dbg_ir        => dbg_ir_s,
+            dbg_rx        => dbg_rx_s,
+            dbg_rz        => dbg_rz_s,
+            dbg_alu       => dbg_alu_s,
+
+            dbg_r1        => dbg_r1_s,
+            dbg_r2        => dbg_r2_s,
+            dbg_r3        => dbg_r3_s,
+            dbg_r5        => dbg_r5_s,
+            dbg_r6        => dbg_r6_s,
+            dbg_r7        => dbg_r7_s,
+            dbg_r8        => dbg_r8_s,
+            dbg_r9        => dbg_r9_s,
+            dbg_r11       => dbg_r11_s,
+            dbg_r13       => dbg_r13_s,
+            dbg_r14       => dbg_r14_s,
+            dbg_r15       => dbg_r15_s
         );
+
+    -- one selected debug bus to show externally
+    with debug_sel select
+        debug_bus <= dbg_r1_s        when "0000",
+                     dbg_r2_s        when "0001",
+                     dbg_r3_s        when "0010",
+                     dbg_r5_s        when "0011",
+                     dbg_r6_s        when "0100",
+                     dbg_r7_s        when "0101",
+                     dbg_r8_s        when "0110",
+                     dbg_r9_s        when "0111",
+                     dbg_r11_s       when "1000",
+                     dbg_r13_s       when "1001",
+                     dbg_r14_s       when "1010",
+                     dbg_r15_s       when "1011",
+                     dbg_pc_s        when "1100",
+                     dbg_alu_s       when "1101",
+                     dbg_rx_s        when "1110",
+                     dbg_rz_s        when "1111",
+                     X"0000"         when others;
 
 end architecture;
