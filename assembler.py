@@ -319,7 +319,7 @@ def main():
     lines = read_file(input_file)
     labels = first_pass(lines)
     instructions = second_pass(lines, labels)
-    write_mif(instructions, output_file)
+    write_mif(instructions, 'instructions.mif', depth=32768)
 
     print(f"Assembled {len(instructions)} words into {output_file}")
 

@@ -30,6 +30,7 @@ ip/
 *.done
 *.rpt
 *.chg
+*.sld
 *.qdf
 *.qsf
 *.qpf.bak
