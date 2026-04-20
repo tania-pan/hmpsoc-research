@@ -83,6 +83,11 @@ def first_pass(lines):
         tokens = line.replace(',', ' ').split()
         opcode_str = tokens[0].upper()
 
+        # handle .ORG directive
+        if opcode_str == '.ORG':
+            address = int(tokens[1], 0)
+            continue
+
         if len(tokens) == 1:
             address += 1
 
@@ -129,6 +134,20 @@ def second_pass(lines, labels):
 
         tokens = line.replace(',', ' ').split()
         opcode_str = tokens[0].upper()
+
+        # handle .ORG directive
+        if opcode_str == '.ORG':
+            target_address = int(tokens[1], 0)
+
+            # check if we're trying to move backwards
+            if target_address < len(machine_code):
+                raise ValueError(f"Cannot set .ORG to {target_address}, already at address {len(machine_code)}")
+                
+            # pad machine code with zeros up to the target address
+            while len(machine_code) < target_address:
+                machine_code.append(0)
+            continue
+    
         opcode = OPCODES.get(opcode_str)
 
         if opcode is None:
