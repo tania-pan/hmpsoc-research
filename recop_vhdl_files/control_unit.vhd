@@ -42,7 +42,9 @@ ENTITY control_unit IS
         -- special-register control
         dpcr_wr : OUT bit_1;       -- write enable for DPCR during DATACALL
         dpcr_lsb_sel : OUT bit_1;  -- '0' = use R7 in DPCR lower half, '1' = use operand
-        sop_wr : OUT bit_1         -- write enable for SOP during SSOP
+        sop_wr : OUT bit_1;         -- write enable for SOP during SSOP
+		  
+		  instr_done : out bit_1 -- for debug button 
     );
 END ENTITY control_unit;
 
@@ -106,6 +108,7 @@ BEGIN
         dpcr_wr <= '0';
         dpcr_lsb_sel <= '0';
         sop_wr <= '0';
+		  instr_done <= '0';
 
         CASE state IS
 
@@ -121,6 +124,7 @@ BEGIN
             -- then latch returned data in the next state
             ----------------------------------------------------------------
             WHEN ST_FETCH1_ADDR =>
+					 instr_done <= '0';
                 pm_addr_sel <= '0';   -- use PC
                 next_state <= ST_FETCH1_LOAD;
 
@@ -164,6 +168,7 @@ BEGIN
             ----------------------------------------------------------------
             WHEN ST_EXEC =>
                 next_state <= ST_FETCH1_ADDR;
+					 instr_done <= '1';
 
                 -- rf_input_sel meanings:
                 -- rf_from_operand = "000" = operand / ir_operand
@@ -242,6 +247,7 @@ BEGIN
                                 -- synchronous DM read: set address first,
                                 -- then load result in ST_DM_READ_LOAD
                                 next_state <= ST_DM_READ_ADDR;
+										  instr_done <= '0';
 
                             WHEN am_direct =>
                                 -- LDR Rz $Operand
@@ -249,6 +255,7 @@ BEGIN
                                 -- synchronous DM read: set address first,
                                 -- then load result in ST_DM_READ_LOAD
                                 next_state <= ST_DM_READ_ADDR;
+										  instr_done <= '0';
 
                             WHEN OTHERS =>
                                 NULL;
@@ -642,7 +649,7 @@ BEGIN
 
                                 pc_inc <= '1';
                                 pc_step_sel <= '0';
-
+										  instr_done <= '1';
                                 next_state <= ST_FETCH1_ADDR;
 
                             WHEN am_direct =>
@@ -654,16 +661,19 @@ BEGIN
 
                                 pc_inc <= '1';
                                 pc_step_sel <= '1';
-
+										  instr_done <= '1';
                                 next_state <= ST_FETCH1_ADDR;
 
                             WHEN OTHERS =>
                                 next_state <= ST_FETCH1_ADDR;
                         END CASE;
+								
 
                     WHEN OTHERS =>
                         next_state <= ST_FETCH1_ADDR;
                 END CASE;
+					 
+
 
         END CASE;
     END PROCESS;

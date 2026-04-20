@@ -17,7 +17,9 @@ entity recop_top is
         debug_sel : in  std_logic_vector(3 downto 0);
 
         -- one muxed debug bus for LEDs / HEX display logic
-        debug_bus : out bit_16
+        debug_bus : out bit_16;
+		  
+		  instr_done : out bit_1 -- for debug button
     );
 end entity;
 
@@ -108,7 +110,8 @@ begin
 
             dpcr_wr       => dpcr_wr_s,
             dpcr_lsb_sel  => dpcr_lsb_sel_s,
-            sop_wr        => sop_wr_s
+            sop_wr        => sop_wr_s,
+				instr_done => instr_done
         );
 
     u_datapath : entity work.datapath
