@@ -593,14 +593,51 @@ BEGIN
                     ----------------------------------------------------------------
                     -- Completed:
                     -- NOOP, JMP, LDR, STR, ADD, AND, OR, SUB, SUBV,
-                    -- PRESENT, DATACALL, SZ, CLFZ, LSIP, SSOP, STRPC
+                    -- PRESENT, DATACALL, SZ, CLFZ, LSIP, SSOP, STRPC, MAX
                     --
                     -- Red slides (not required):
-                    -- CER, CEOT, SEOT, LER, SSVOP, MAX
+                    -- CER, CEOT, SEOT, LER, SSVOP
                     --
                     -- Not in assignment slides:
                     -- SRES
                     ----------------------------------------------------------------
+						  
+						  ----------------------------------------------------------------
+                    -- MAX
+                    ----------------------------------------------------------------
+                    WHEN max =>
+                        CASE am IS
+
+                            WHEN am_immediate =>
+                                -- MAX Rz #Operand
+                                -- Rz = max(Rz, Operand)
+                                alu_operation <= alu_max;
+                                alu_op1_sel <= "01"; -- operand
+                                alu_op2_sel <= '1';  -- rz
+
+                                reg_write <= '1';
+                                rf_input_sel <= rf_from_alu;
+
+                                pc_inc <= '1';
+                                pc_step_sel <= '1';
+
+                            WHEN am_register =>
+                                -- MAX Rz Rx
+                                -- Rz = max(Rz, Rx)
+                                alu_operation <= alu_max;
+                                alu_op1_sel <= "00"; -- rx
+                                alu_op2_sel <= '1';  -- rz
+
+                                reg_write <= '1';
+                                rf_input_sel <= rf_from_alu;
+
+                                pc_inc <= '1';
+                                pc_step_sel <= '0';
+
+                            WHEN OTHERS =>
+                                NULL;
+
+                        END CASE;
 
                     WHEN OTHERS =>
                         NULL;
