@@ -32,7 +32,6 @@ ip/
 *.chg
 *.sld
 *.qdf
-*.qsf
 *.qpf.bak
 *.qsf.bak
 *.vhd.bak

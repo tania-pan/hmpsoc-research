@@ -15,10 +15,12 @@ COMPSYS 701 Group Project 1
 **HEX(0:3)**: shows the value of the selected register in decimal
 ## Getting Started
 1. **Open Project**: Launch Quartus and open the `.qpf` project file.
-2. **Set Top-Level Entity**: Right-click `recop_soc.vhd` in the project navigator and select **Set as Top-Level Entity**.
-3. **Assignments** Ensure the DE1-SoC pin assignments are imported (Assignments -> Import Assignments).
-4. **Compile**: Click **Start Compilation**.
-5. **Flash**:
+2. **Add Files**: Add all .vhd files from recop_vhdl_files.
+3. **Set Top-Level Entity**: Right-click `recop_soc.vhd` in the project navigator and select **Set as Top-Level Entity**.
+4. **Select Device**: Assignments -> Device -> Board -> Select DE1-SoC.
+5. **Assignments**: Ensure the `DE1-SoC.qsf` pin assignments are imported (Assignments -> Import Assignments).
+6. **Compile**: Click **Start Compilation**.
+7. **Flash**:
    - Open Tools -> Programmer.
    - Ensure USB-Blaster is selected.
    - Click Start to load the `.sof` file onto the FPGA.
