@@ -1,41 +1,16 @@
-.ORG 0x0000     ; set start address to 0
-LDR R1 #10
-LDR R2 #20
-STR R1 #99
-LDR R5 R1
-STR R1 R2
-LDR R6 R1
-STR R2 $30
-LDR R7 $30
-ADD R8 R2 #5
-SUBV R9 R2 #5
-SUB R2 #20
-SZ TARGET_Z
-LDR R10 #999
+.ORG 0x0000             ; set start address to 0
+START:
+    LSIP R1             ; Read the physical Switches into R1
+    LDR R2 #1           ; Load the value 1
+    ADD R3 R1 R2        ; R3 = Switches + 1
+    SSOP R3             ; Output the result to the LEDs
+    
+    ; Test a branch
+    SUB R1 #0           ; Check if switches are all at 0
+    SZ IS_ZERO          ; If switches are 0, jump to IS_ZERO
+    JMP START           ; Otherwise, keep looping
 
-TARGET_Z:
-CLFZ
-SZ TARGET_BAD
-NOOP
-LDR R11 #0
-PRESENT R11 #PRES_TAKEN
-LDR R12 #888
-
-PRES_TAKEN:
-LSIP R13
-LDR R7 #0x1234
-LDR R14 #0xABCD
-DATACALL R14
-DATACALL R14 #0x5678
-LDR R15 #0x00F0
-SSOP R15
-
-.ORG 0x0100     ; jump in memory to address 256 (0x0100)
-LDR R3 #48
-JMP R3
-NOOP
-
-TARGET_BAD:
-LOOP:
-NOOP
-JMP LOOP
+IS_ZERO:
+    LDR R4 #0xAAAA      ; Load a pattern (10101010...)
+    SSOP R4             ; Light up the LEDs in a pattern
+    JMP START           ; Go back
