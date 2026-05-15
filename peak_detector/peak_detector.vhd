@@ -10,6 +10,7 @@ entity peak_detector is
 		current_corr 		: in unsigned(31 downto 0);
 		data_ready 			: in std_logic;
 		
+		avalon_addr			: in std_logic;
 		avalon_read			: in std_logic;
 		avalon_readdata 	: out std_logic_vector(31 downto 0);
 		
@@ -58,14 +59,21 @@ architecture rtl of peak_detector is
 
 				-- reset on read
             if avalon_read = '1' then
-                irq_reg <= '0';
-            end if;
+					irq_reg <= '0';
+        
+						if avalon_addr = '0' then
+							avalon_readdata <= std_logic_vector(result_reg);
+						else
+							avalon_readdata <= (0 => irq_reg, others => '0');
+						end if;
+				else
+					avalon_readdata <= (others => '0'); 
+				end if;
 
-		end if;
+			end if;
 	end process;
 
    peak_detected <= irq_reg;
-   avalon_readdata <= std_logic_vector(result_reg);
 
 end architecture;
 	
