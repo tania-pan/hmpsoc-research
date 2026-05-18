@@ -14,13 +14,13 @@ v_t = (0.3 +
        0.375 * np.sin(7 * w0 * t + 0.6) + 
        0.1875 * np.sin(9 * w0 * t + 0.3))
 
-# scaling for 10-bit unsigned (0 to 1023)
+# scaling for 10-bit unsigned (0 to 4095)
 v_min, v_max = np.min(v_t), np.max(v_t)
-v_scaled = ((v_t - v_min) / (v_max - v_min) * 1023).astype(int)
+v_scaled = ((v_t - v_min) / (v_max - v_min) * 4095).astype(int)
 
 # generate MIF content
 with open("signal_data.mif", "w") as f:
-    f.write("WIDTH=10;\nDEPTH=1600;\nADDRESS_RADIX=UNS;\nDATA_RADIX=UNS;\nCONTENT BEGIN\n")
+    f.write("WIDTH=12;\nDEPTH=1600;\nADDRESS_RADIX=UNS;\nDATA_RADIX=UNS;\nCONTENT BEGIN\n")
     for i, val in enumerate(v_scaled):
         f.write(f"    {i} : {val};\n")
     f.write("END;\n")

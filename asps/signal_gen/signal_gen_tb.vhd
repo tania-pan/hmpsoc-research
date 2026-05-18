@@ -7,9 +7,9 @@ end entity;
 
 architecture sim of signal_gen_tb is
     signal clk          : std_logic := '0';
-    signal reset_n      : std_logic := '0';
+    signal reset        : std_logic := '0';
     signal tick_16khz   : std_logic := '0';
-    signal signal_out   : std_logic_vector(9 downto 0);
+    signal signal_out   : std_logic_vector(11 downto 0);
     signal data_ready   : std_logic;
 
     constant clk_period : time := 20 ns; -- 50MHz clock
@@ -18,7 +18,7 @@ begin
     uut: entity work.signal_gen
         port map (
             clk        => clk,
-            reset_n    => reset_n,
+            reset      => reset,
             tick_16khz => tick_16khz,
             signal_out => signal_out,
             data_ready => data_ready
@@ -32,9 +32,9 @@ begin
 
     sim_process : process
     begin
-        reset_n <= '0';
+        reset <= '0';
         wait for 100 ns;
-        reset_n <= '1';
+        reset <= '1';
         wait for clk_period * 5;
 
         for i in 1 to 2000 loop

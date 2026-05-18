@@ -8,7 +8,7 @@ entity signal_gen is
         reset       : in  std_logic;
         tick_16khz  : in  std_logic;
         
-        signal_out  : out std_logic_vector(9 downto 0);
+        signal_out  : out std_logic_vector(11 downto 0);
         data_ready  : out std_logic
     );
 end entity;
@@ -19,7 +19,7 @@ architecture rtl of signal_gen is
         port (
             address : in  std_logic_vector(10 downto 0);
             clock   : in  std_logic;
-            q       : out std_logic_vector(9 downto 0)
+            q       : out std_logic_vector(11 downto 0)
         );
     end component;
 
@@ -35,9 +35,9 @@ begin
             q       => signal_out
         );
 
-    process(clk, reset_n)
+    process(clk, reset)
     begin
-        if reset_n = '0' then
+        if reset = '0' then
             rom_address <= (others => '0');
             valid_reg   <= '0';
             
