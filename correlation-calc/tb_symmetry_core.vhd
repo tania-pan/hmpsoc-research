@@ -17,7 +17,7 @@ architecture sim of tb_symmetry_core is
     signal sample_in    : std_logic_vector(11 downto 0) := (others => '0');
 
     signal corr_done    : std_logic;
-    signal corr_out     : std_logic_vector(35 downto 0);
+    signal corr_out     : std_logic_vector(31 downto 0);
 
     constant CLK_PERIOD : time := 10 ns; -- 100 MHz
 
@@ -100,7 +100,7 @@ begin
             report test_name & " corr_out = " &
                    integer'image(to_integer(unsigned(corr_out)));
 
-            assert unsigned(corr_out) = to_unsigned(expected_value, 36)
+            assert unsigned(corr_out) = to_unsigned(expected_value, 32)
                 report test_name & " FAILED: Expected " &
                        integer'image(expected_value)
                 severity error;

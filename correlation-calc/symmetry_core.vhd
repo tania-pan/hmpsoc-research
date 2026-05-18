@@ -11,7 +11,7 @@ entity symmetry_core is
         sample_in    : in  std_logic_vector(11 downto 0);
 
         corr_done    : out std_logic;
-        corr_out     : out std_logic_vector(35 downto 0)
+        corr_out     : out std_logic_vector(31 downto 0)
     );
 end entity;
 
@@ -24,7 +24,7 @@ architecture rtl of symmetry_core is
     constant SAMPLE_W    : integer := 12;
     constant ADDR_W      : integer := 6;
     constant RAM_DEPTH   : integer := 64;
-    constant ACC_W       : integer := 36;
+    constant ACC_W       : integer := 32;
 
     constant WINDOW_SIZE : integer := 32;
     constant NUM_PAIRS   : integer := WINDOW_SIZE / 2;
