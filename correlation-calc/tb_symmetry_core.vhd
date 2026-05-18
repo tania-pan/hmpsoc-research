@@ -175,6 +175,38 @@ begin
         end loop;
 
         check_corr(160000, "TEST 3");
+        
+        ----------------------------------------------------------------
+        -- TEST 4: Ramp input with circular buffer wrap-around
+        --
+        -- Input:
+        --   70 samples: 0, 1, 2, ..., 69
+        --
+        -- Why:
+        --   This forces the 64-entry circular buffer to wrap around.
+        --   Unlike the constant-input wrap test, the output depends on
+        --   selecting the correct wrapped RAM addresses.
+        --
+        -- After 70 samples, the latest 32-sample window is:
+        --   38, 39, 40, ..., 69
+        --
+        -- Centre split is between 53 and 54.
+        --
+        -- Expected mirror pairs:
+        --   54*53 + 55*52 + 56*51 + ... + 69*38
+        --
+        -- Expected result:
+        --   44432
+        ----------------------------------------------------------------
+        do_reset;
+
+        report "TEST 4: Feeding ramp samples 0 to 69 to test wrap-around with changing data";
+
+        for i in 0 to 69 loop
+            feed_sample(i);
+        end loop;
+
+        check_corr(44432, "TEST 4");
 
 
         ----------------------------------------------------------------
