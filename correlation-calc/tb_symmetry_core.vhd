@@ -7,9 +7,7 @@ end entity;
 
 architecture sim of tb_symmetry_core is
 
-    --------------------------------------------------------------------
-    -- DUT signals
-    --------------------------------------------------------------------
+    -- Testbench signals connected to the DUT
     signal clk          : std_logic := '0';
     signal reset        : std_logic := '1';
 
@@ -23,9 +21,6 @@ architecture sim of tb_symmetry_core is
 
 begin
 
-    --------------------------------------------------------------------
-    -- Instantiate DUT
-    --------------------------------------------------------------------
     dut : entity work.symmetry_core
         port map (
             clk          => clk,
@@ -36,19 +31,11 @@ begin
             corr_out     => corr_out
         );
 
-    --------------------------------------------------------------------
-    -- Clock generation
-    --------------------------------------------------------------------
+    -- Free-running simulation clock
     clk <= not clk after CLK_PERIOD / 2;
 
-    --------------------------------------------------------------------
-    -- Main stimulus process
-    --------------------------------------------------------------------
     process
 
-        ----------------------------------------------------------------
-        -- Reset DUT
-        ----------------------------------------------------------------
         procedure do_reset is
         begin
             reset <= '1';
@@ -63,16 +50,6 @@ begin
         end procedure;
 
 
-        ----------------------------------------------------------------
-        -- Feed one sample into DUT
-        --
-        -- sample_valid is pulsed for one clock.
-        -- Then we wait long enough for the correlation core to finish.
-        --
-        -- Important:
-        -- The DUT auto-starts correlation after enough samples exist.
-        -- So corr_done may happen during this wait time.
-        ----------------------------------------------------------------
         procedure feed_sample(value : integer) is
         begin
             sample_in <= std_logic_vector(to_unsigned(value, 12));
@@ -81,15 +58,12 @@ begin
 
             sample_valid <= '0';
 
-            -- Wait long enough for correlation to finish before next sample.
-            -- This keeps the first simulation simple.
+            -- This testbench feeds samples slowly so each correlation can finish.
+            -- The core can still accept samples through sample_valid as normal.
             wait for 2000 ns;
         end procedure;
 
 
-        ----------------------------------------------------------------
-        -- Check corr_out value
-        ----------------------------------------------------------------
         procedure check_corr(
             expected_value : integer;
             test_name      : string
@@ -111,15 +85,9 @@ begin
 
     begin
 
-        ----------------------------------------------------------------
-        -- TEST 1: Constant input
-        --
-        -- Input:
-        --   32 samples, all 100
-        --
-        -- Expected:
-        --   16 pairs x 100 x 100 = 160000
-        ----------------------------------------------------------------
+        -- Test 1 checks the easiest case first.
+        -- Every mirrored pair is 100*100, so the result should be:
+        -- 16 * 100 * 100 = 160000
         do_reset;
 
         report "TEST 1: Feeding 32 samples of value 100";
@@ -131,18 +99,11 @@ begin
         check_corr(160000, "TEST 1");
 
 
-        ----------------------------------------------------------------
-        -- TEST 2: Ramp input
+        -- Test 2 uses one full 32-sample window:
+        -- 0, 1, 2, ..., 31
         --
-        -- Input:
-        --   0, 1, 2, 3, ..., 31
-        --
-        -- Expected address pairs:
-        --   16x15 + 17x14 + 18x13 + ... + 31x0
-        --
-        -- Expected result:
-        --   2480
-        ----------------------------------------------------------------
+        -- The centre split is between 15 and 16, so the pairs are:
+        -- 16*15, 17*14, 18*13, ..., 31*0
         do_reset;
 
         report "TEST 2: Feeding ramp samples 0 to 31";
@@ -154,18 +115,8 @@ begin
         check_corr(2480, "TEST 2");
 
 
-        ----------------------------------------------------------------
-        -- TEST 3: Circular buffer wrap-around
-        --
-        -- Input:
-        --   70 samples, all 100
-        --
-        -- Why this test matters:
-        --   The 64-deep RAM write pointer wraps around after sample 64.
-        --   Since all samples are 100, the correlation should still be:
-        --
-        --   16 pairs x 100 x 100 = 160000
-        ----------------------------------------------------------------
+        -- Test 3 forces the circular buffer to wrap.
+        -- Because all samples are still 100, the expected result should not change.
         do_reset;
 
         report "TEST 3: Feeding 70 samples of value 100 to test wrap-around";
@@ -176,28 +127,13 @@ begin
 
         check_corr(160000, "TEST 3");
         
-        ----------------------------------------------------------------
-        -- TEST 4: Ramp input with circular buffer wrap-around
-        --
-        -- Input:
-        --   70 samples: 0, 1, 2, ..., 69
-        --
-        -- Why:
-        --   This forces the 64-entry circular buffer to wrap around.
-        --   Unlike the constant-input wrap test, the output depends on
-        --   selecting the correct wrapped RAM addresses.
-        --
-        -- After 70 samples, the latest 32-sample window is:
-        --   38, 39, 40, ..., 69
-        --
-        -- Centre split is between 53 and 54.
+
+        -- Test 4 also wraps the buffer, but now the data changes.
+        -- After 70 samples, the latest 32-sample window should be:
+        -- 38, 39, 40, ..., 69
         --
         -- Expected mirror pairs:
-        --   54*53 + 55*52 + 56*51 + ... + 69*38
-        --
-        -- Expected result:
-        --   44432
-        ----------------------------------------------------------------
+        -- 54*53, 55*52, 56*51, ..., 69*38
         do_reset;
 
         report "TEST 4: Feeding ramp samples 0 to 69 to test wrap-around with changing data";
@@ -209,13 +145,9 @@ begin
         check_corr(44432, "TEST 4");
 
 
-        ----------------------------------------------------------------
-        -- Finished
-        ----------------------------------------------------------------
         report "ALL TESTS PASSED";
         wait;
 
     end process;
 
 end architecture;
-
