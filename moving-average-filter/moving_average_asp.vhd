@@ -1,4 +1,9 @@
 --Moving Average Filter ASP
+
+-- The entity processes streaming 12-bit ADC payloads wrapped inside a 32-bit input packet (recv_slot_data) 
+-- synchronized to a 1-bit clock, and routes the resulting 12-bit filtered average out via a 32-bit 
+-- destination packet (send_slot_data) directed by 8-bit slot addressing signals (recv_slot_addr and send_slot_addr).
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

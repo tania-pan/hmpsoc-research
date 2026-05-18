@@ -1,4 +1,4 @@
--- Safe Testbench for Power Signal Data (tb_moving_average_asp.vhd)
+-- Testbench for Power Signal Data (tb_moving_average_asp.vhd)
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
