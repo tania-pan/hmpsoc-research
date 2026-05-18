@@ -1,0 +1,116 @@
+m255
+K4
+z2
+!s12c _opt
+Z0 !s99 nomlopt
+!s11e vcom 2025.3_2 2025.11, Nov 19 2025
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z1 dC:/Users/llat663/Downloads/moving-average-filter/simulation/modelsim
+T_opt
+!i145 1
+!i144 0
+!s110 1779078563
+Viad=W6XDMUX8393`JKLf70
+04 21 3 work tb_moving_average_asp sim 1
+=1-cc96e534b502-6a0a95a2-150-2c6c
+R0
+!s12f OEM100
+!s12b OEM100
+!s124 OEM100
+!s135 nogc
+o-quiet -auto_acc_if_foreign -work work -L altera -L lpm -L sgate -L altera_mf -L altera_lnsim -L cyclonev -L rtl_work -L work +acc
+tCvgOpt 0 defaultOptions 1108175812
+n@_opt
+OL;O;2025.3_2;82
+Emoving_average_asp
+Z2 w1779078144
+Z3 DPx4 ieee 11 numeric_std 0 22 aU^R8eGcicLcUFIaBQSL>3
+Z4 DPx3 std 6 textio 0 22 zE1`LPoLg^DX3Oz^4Fj1K3
+Z5 DPx4 ieee 14 std_logic_1164 0 22 cVAk:aDinOX8^VGI1ekP<3
+!i122 0
+R1
+Z6 8C:/Users/llat663/Downloads/moving-average-filter/moving_average_asp.vhd
+Z7 FC:/Users/llat663/Downloads/moving-average-filter/moving_average_asp.vhd
+l0
+L6 1
+VFW0gPR3=EIaWBFF?<QZIU2
+!s100 Jla^=:EkPTAoP]lHfVR?h1
+Z8 OL;C;2025.3_2;82
+31
+Z9 !s110 1779078561
+!i10b 1
+Z10 !s108 1779078561.000000
+Z11 !s90 -reportprogress|300|-93|-work|work|C:/Users/llat663/Downloads/moving-average-filter/moving_average_asp.vhd|
+Z12 !s107 C:/Users/llat663/Downloads/moving-average-filter/moving_average_asp.vhd|
+!i113 0
+Z13 o-93 -work work
+Z14 tExplicit 1 CvgOpt 0 defaultOptions 1083421120
+Artl
+R3
+R4
+R5
+Z15 DEx4 work 18 moving_average_asp 0 22 FW0gPR3=EIaWBFF?<QZIU2
+!i122 0
+l23
+L19 34
+V<QfYGbD74MP1eVAAD<MEM3
+!s100 AMo:Pg[diTJ;A`bgen0R:0
+R8
+31
+R9
+!i10b 1
+R10
+R11
+R12
+!i113 0
+R13
+R14
+Etb_moving_average_asp
+Z16 w1779077114
+R3
+R4
+R5
+!i122 1
+R1
+Z17 8C:/Users/llat663/Downloads/moving-average-filter/tb_moving_average_asp.vhd
+Z18 FC:/Users/llat663/Downloads/moving-average-filter/tb_moving_average_asp.vhd
+l0
+L6 1
+V9En=KHn<a4Ihg?L@W99j11
+!s100 L:O5znfjc0CZ^XL:N^kl83
+R8
+31
+R9
+!i10b 1
+R10
+Z19 !s90 -reportprogress|300|-93|-work|work|C:/Users/llat663/Downloads/moving-average-filter/tb_moving_average_asp.vhd|
+Z20 !s107 C:/Users/llat663/Downloads/moving-average-filter/tb_moving_average_asp.vhd|
+!i113 0
+R13
+R14
+Asim
+R15
+R3
+R4
+R5
+DEx4 work 21 tb_moving_average_asp 0 22 9En=KHn<a4Ihg?L@W99j11
+!i122 1
+l17
+L9 72
+V@gK=^8R`e]JZ3]D`SM9h71
+!s100 oSGo56KB7J^hUJ<UO>g4B2
+R8
+31
+R9
+!i10b 1
+R10
+R19
+R20
+!i113 0
+R13
+R14
