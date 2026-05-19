@@ -22,33 +22,61 @@ entity moving_average_asp is
 end entity moving_average_asp;
 
 architecture rtl of moving_average_asp is
-    -- Use unsigned types matching your ADC bit width selection (e.g., 12 bits)
-    type sample_reg is array (0 to 2) of unsigned(11 downto 0);
+    -- Allocated to support the maximum history required (L=16 requires 15 past samples)
+    type sample_reg is array (0 to 14) of unsigned(11 downto 0);
     signal regs : sample_reg := (others => (others => '0')); 
 begin
     process(clock)
-        -- Sized to cleanly hold the sum of 4 cumulative unsigned samples without overflow
-        variable v_sum  : unsigned(13 downto 0);
-        variable v_avg  : unsigned(11 downto 0);
+        -- Sized to cleanly hold the maximum sum of 16 12-bit samples without overflow (12 bits + 4 bits = 16 bits)
+        variable v_sum       : unsigned(15 downto 0);
+        variable v_avg       : unsigned(11 downto 0);
+        variable shift_bits  : integer range 0 to 4;
+        variable window_sel  : std_logic_vector(1 downto 0);
     begin
         if rising_edge(clock) then
             send_slot_addr <= (others => '0');
             send_slot_data <= (others => '0');
 
-            -- Ensure this matches your DP-ASP command packet format criteria
+            -- Packet Validation Protocol (Checks for Data Packet Command Prefix "1000")
             if recv_slot_data(31 downto 28) = "1000" then
                 
-                -- Single-channel pipeline accumulation (No channel splitting!)
-                v_sum := resize(unsigned(recv_slot_data(11 downto 0)), 14) + 
-                         resize(regs(0), 14) + resize(regs(1), 14) + resize(regs(2), 14);
+                -- Extract the programmable window configuration selection bits
+                window_sel := recv_slot_data(21 downto 20);
                 
-                -- Shift new sample into the history array
-                regs <= unsigned(recv_slot_data(11 downto 0)) & regs(0 to 1);
+                -- Multiplexed Accumulator Tree and Division Configuration
+                case window_sel is
+                    when "00" => -- Mode: L = 4
+                        v_sum := resize(unsigned(recv_slot_data(11 downto 0)), 16) + 
+                                 resize(regs(0), 16) + resize(regs(1), 16) + resize(regs(2), 16);
+                        shift_bits := 2; -- Arithmetic division by 4
 
-                -- Divide by 4 (Shift Right by 2)
-                v_avg := resize(shift_right(v_sum, 2), 12);
+                    when "01" => -- Mode: L = 8
+                        v_sum := resize(unsigned(recv_slot_data(11 downto 0)), 16);
+                        for i in 0 to 6 loop
+                            v_sum := v_sum + resize(regs(i), 16);
+                        end loop;
+                        shift_bits := 3; -- Arithmetic division by 8
+
+                    when "10" => -- Mode: L = 16
+                        v_sum := resize(unsigned(recv_slot_data(11 downto 0)), 16);
+                        for i in 0 to 14 loop
+                            v_sum := v_sum + resize(regs(i), 16);
+                        end loop;
+                        shift_bits := 4; -- Arithmetic division by 16
+
+                    when others => -- Fallback protective state default to L = 4
+                        v_sum := resize(unsigned(recv_slot_data(11 downto 0)), 16) + 
+                                 resize(regs(0), 16) + resize(regs(1), 16) + resize(regs(2), 16);
+                        shift_bits := 2;
+                end case;
                 
-                -- Forward the filtered unsigned power wave sample back onto the NoC bus
+                -- Shift the newest 12-bit sample into the full historical data register trace
+                regs <= unsigned(recv_slot_data(11 downto 0)) & regs(0 to 13);
+
+                -- Dynamic division executing via variable barrel shifter routing
+                v_avg := resize(shift_right(v_sum, shift_bits), 12);
+                
+                -- Packet Assembler: Combines the original control headers with the new average payload
                 send_slot_addr <= TARGET_PORT; 
                 send_slot_data <= recv_slot_data(31 downto 12) & std_logic_vector(v_avg);
             end if;
