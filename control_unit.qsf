@@ -38,24 +38,10 @@
 
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSEMA5F31C6
-set_global_assignment -name TOP_LEVEL_ENTITY recop_soc
+set_global_assignment -name TOP_LEVEL_ENTITY gp2_asp_chain_stub
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:22:29  APRIL 21, 2026"
 set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"
-set_global_assignment -name VHDL_FILE recop_vhdl_files/ALU.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/control_unit.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/data_mem.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/datapath.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/opcodes.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/prog_mem.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_soc.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_top.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_types.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/regfile.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/registers.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/seven_seg_decoder.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/tb_recop_top.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/various_constants.vhd
 set_location_assignment PIN_AJ4 -to ADC_CS_N
 set_location_assignment PIN_AK4 -to ADC_DIN
 set_location_assignment PIN_AK3 -to ADC_DOUT
@@ -498,8 +484,35 @@ set_instance_assignment -name PACKAGE_SKEW_COMPENSATION OFF -to HPS_DDR3_WE_N -e
 set_instance_assignment -name PACKAGE_SKEW_COMPENSATION OFF -to HPS_DDR3_RESET_N -entity DE1_SoC
 set_instance_assignment -name PACKAGE_SKEW_COMPENSATION OFF -to HPS_DDR3_CK_P -entity DE1_SoC
 set_instance_assignment -name PACKAGE_SKEW_COMPENSATION OFF -to HPS_DDR3_CK_N -entity DE1_SoC
+set_global_assignment -name BOARD "DE1-SoC Board"
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/symmetry_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/symmetry_core.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/signal_rom.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/signal_gen.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/peak_detector_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/moving_average_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/gp2_packet_pkg.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/gp2_asp_chain_stub.vhd
+set_global_assignment -name VHDL_FILE gp2_linkable_asps/asp_signal_noc.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/various_constants.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/tb_recop_top.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/seven_seg_decoder.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/registers.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/regfile.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_types.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_top.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_soc.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/prog_mem.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/opcodes.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/datapath.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/data_mem.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/control_unit.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/ALU.vhd
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_global_assignment -name BOARD "DE1-SoC Board"
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
