@@ -38,7 +38,7 @@
 
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CSEMA5F31C6
-set_global_assignment -name TOP_LEVEL_ENTITY gp2_tdma_signal_test_top
+set_global_assignment -name TOP_LEVEL_ENTITY gp2_tdma_full_chain_top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "16:57:07  JUNE 02, 2026"
 set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"
@@ -306,11 +306,8 @@ set_location_assignment PIN_E12 -to VGA_R[6]
 set_location_assignment PIN_F13 -to VGA_R[7]
 set_location_assignment PIN_C10 -to VGA_SYNC_N
 set_location_assignment PIN_D11 -to VGA_VS
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_global_assignment -name VHDL_FILE TdmaMinFifo/TdmaMinFifo.vhd
-set_global_assignment -name QIP_FILE TdmaMinFifo/TdmaMinFifo.qip
+set_global_assignment -name QIP_FILE src/TdmaMinFifo/TdmaMinFifo.qip
+set_global_assignment -name VHDL_FILE src/TdmaMinFifo/TdmaMinFifo.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinTypes.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinSwitch.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinStage.vhd
@@ -318,16 +315,18 @@ set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinSlots.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinInterface.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMinFabric.vhd
 set_global_assignment -name VHDL_FILE src/TdmaMin/TdmaMin.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/gp2_asp_de1_top.vhd
-set_global_assignment -name MIF_FILE ../signal_data.mif
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/symmetry_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/symmetry_core.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/signal_rom.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/signal_gen.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/peak_detector_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/moving_average_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/gp2_packet_pkg.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/gp2_asp_chain_stub.vhd
-set_global_assignment -name VHDL_FILE gp2_linkable_asps/asp_signal_noc.vhd
-set_global_assignment -name VHDL_FILE gp2_tdma_signal_test_top.vhd
+set_global_assignment -name VHDL_FILE src/gp2_tdma_full_chain_top.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/tb_gp2_asp_chain_stub.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/symmetry_noc_asp.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/symmetry_core.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/signal_rom.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/signal_gen.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/peak_detector_noc_asp.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/moving_average_noc_asp.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/gp2_packet_pkg.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/gp2_asp_chain_stub.vhd
+set_global_assignment -name VHDL_FILE src/gp2_linkable_asps/asp_signal_noc.vhd
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
