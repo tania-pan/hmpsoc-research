@@ -44,38 +44,6 @@ set_global_assignment -name PROJECT_CREATION_TIME_DATE "17:31:35  JUNE 03, 2026"
 set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name BOARD "DE1-SoC Board"
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/symmetry_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/symmetry_core.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/signal_rom.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/signal_gen.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/peak_detector_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/moving_average_noc_asp.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/gp2_packet_pkg.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/asp_signal_noc.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/various_constants.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/tb_recop_top.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/seven_seg_decoder.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/registers.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/regfile.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_types.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_top.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_soc.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/prog_mem.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/opcodes.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/datapath.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/data_mem.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/control_unit.vhd
-set_global_assignment -name VHDL_FILE recop_vhdl_files/ALU.vhd
-set_global_assignment -name VHDL_FILE gp2_files/gp2_tdma_full_chain_top.vhd
-set_global_assignment -name QIP_FILE ../gp2/src/TdmaMin/TdmaMinFifo.qip
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinTypes.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinSwitch.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinStage.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinSlots.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinInterface.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinFifo.vhd -library ip
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinFabric.vhd
-set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMin.vhd
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
@@ -341,5 +309,38 @@ set_location_assignment PIN_E12 -to VGA_R[6]
 set_location_assignment PIN_F13 -to VGA_R[7]
 set_location_assignment PIN_C10 -to VGA_SYNC_N
 set_location_assignment PIN_D11 -to VGA_VS
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/recop_noc_wrapper.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/symmetry_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/symmetry_core.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/signal_rom.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/signal_gen.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/peak_detector_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/moving_average_noc_asp.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/gp2_packet_pkg.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_linkable_asps/asp_signal_noc.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/various_constants.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/tb_recop_top.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/seven_seg_decoder.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/registers.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/regfile.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_types.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_top.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/recop_soc.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/prog_mem.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/opcodes.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/datapath.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/data_mem.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/control_unit.vhd
+set_global_assignment -name VHDL_FILE recop_vhdl_files/ALU.vhd
+set_global_assignment -name VHDL_FILE gp2_files/gp2_tdma_full_chain_top.vhd
+set_global_assignment -name QIP_FILE ../gp2/src/TdmaMin/TdmaMinFifo.qip
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinTypes.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinSwitch.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinStage.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinSlots.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinInterface.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinFifo.vhd -library ip
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinFabric.vhd
+set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMin.vhd
 set_global_assignment -name VHDL_FILE ../gp2/src/TdmaMin/TdmaMinFifo.vhd
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

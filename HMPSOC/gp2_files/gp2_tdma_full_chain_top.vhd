@@ -32,9 +32,21 @@ architecture rtl of gp2_tdma_full_chain_top is
     signal tick_16khz   : std_logic := '0';
     signal tick_counter : unsigned(11 downto 0) := (others => '0');
 
-    signal config_pkt   : std_logic_vector(39 downto 0) := (others => '0');
-    signal config_sent  : std_logic := '0';
+    --------------------------------------------------------------------
+    -- RECOP NoC adapter signals
+    --
+    -- Port mapping:
+    -- port 0 = ReCOP processor wrapper
+    -- port 1 = signal generator ASP
+    -- port 2 = moving average ASP
+    -- port 3 = symmetry/correlation ASP
+    -- port 4 = peak detector ASP
+    -- port 5 = debug sink
+    --------------------------------------------------------------------
+    signal recop_send : tdma_min_port;
+    signal recop_recv : tdma_min_port;
 
+    signal sig_recv_pkt  : std_logic_vector(39 downto 0);
     signal sig_send_pkt  : std_logic_vector(39 downto 0);
     signal avg_recv_pkt  : std_logic_vector(39 downto 0);
     signal avg_send_pkt  : std_logic_vector(39 downto 0);
@@ -47,6 +59,7 @@ architecture rtl of gp2_tdma_full_chain_top is
     signal latched_addr : std_logic_vector(7 downto 0) := (others => '0');
     signal latched_data : std_logic_vector(31 downto 0) := (others => '0');
 
+    signal recop_seen : std_logic := '0';
     signal sig_seen   : std_logic := '0';
     signal avg_seen   : std_logic := '0';
     signal sym_seen   : std_logic := '0';
@@ -76,7 +89,9 @@ architecture rtl of gp2_tdma_full_chain_top is
         end case;
     end function;
 
+    --------------------------------------------------------------------
     -- Convert GP2 40-bit ASP packet to Lab2 TDMA-MIN address.
+    --------------------------------------------------------------------
     function pkt_to_addr(pkt : std_logic_vector(39 downto 0)) return std_logic_vector is
         variable a : std_logic_vector(7 downto 0);
     begin
@@ -85,7 +100,9 @@ architecture rtl of gp2_tdma_full_chain_top is
         return a;
     end function;
 
+    --------------------------------------------------------------------
     -- Convert GP2 40-bit ASP packet to Lab2 TDMA-MIN data.
+    --------------------------------------------------------------------
     function pkt_to_data(pkt : std_logic_vector(39 downto 0)) return std_logic_vector is
         variable d : std_logic_vector(31 downto 0);
     begin
@@ -99,7 +116,9 @@ architecture rtl of gp2_tdma_full_chain_top is
         return d;
     end function;
 
+    --------------------------------------------------------------------
     -- Convert Lab2 TDMA-MIN received data back into GP2 40-bit ASP packet.
+    --------------------------------------------------------------------
     function data_to_pkt(
         data       : std_logic_vector(31 downto 0);
         local_dest : std_logic_vector(2 downto 0)
@@ -135,15 +154,32 @@ begin
         );
 
     --------------------------------------------------------------------
-    -- Convert NoC receive ports into ASP receive packets
+    -- ReCOP wrapper on NoC port 0
     --
-    -- Port mapping:
-    -- port 1 = signal generator ASP
-    -- port 2 = moving average ASP
-    -- port 3 = symmetry/correlation ASP
-    -- port 4 = peak detector ASP
-    -- port 5 = debug sink
+    -- ReCOP writes to its memory-mapped TX registers:
+    -- 0x3000 = target NoC address
+    -- 0x3001 = payload high word
+    -- 0x3002 = payload low word
+    -- 0x3003 = trigger send
+    --
+    -- To start the GP2 chain, ReCOP should send a CONFIG packet to port 1.
+    -- Equivalent fake-config packet was:
+    -- valid=1, type=1111, dest=001, payload=x40000001
     --------------------------------------------------------------------
+    u_recop : entity work.recop_noc_wrapper
+        port map (
+            clk       => clock,
+            reset_n   => reset_n,
+            send_port => recop_send,
+            recv_port => recop_recv
+        );
+
+    recop_recv <= recv_port(0);
+
+    --------------------------------------------------------------------
+    -- Convert NoC receive ports into ASP receive packets
+    --------------------------------------------------------------------
+    sig_recv_pkt  <= data_to_pkt(recv_port(1).data, "001");
     avg_recv_pkt  <= data_to_pkt(recv_port(2).data, "010");
     sym_recv_pkt  <= data_to_pkt(recv_port(3).data, "011");
     peak_recv_pkt <= data_to_pkt(recv_port(4).data, "100");
@@ -151,12 +187,16 @@ begin
     --------------------------------------------------------------------
     -- NoC send ports
     --------------------------------------------------------------------
-    process(sig_send_pkt, avg_send_pkt, sym_send_pkt, peak_send_pkt)
+    process(recop_send, sig_send_pkt, avg_send_pkt, sym_send_pkt, peak_send_pkt)
     begin
         for i in 0 to ports-1 loop
             send_port(i).addr <= (others => '0');
             send_port(i).data <= (others => '0');
         end loop;
+
+        -- ReCOP sends directly using the Lab2 TDMA-MIN port format
+        send_port(0).addr <= recop_send.addr;
+        send_port(0).data <= recop_send.data;
 
         -- Signal ASP sends to moving average at port 2
         send_port(1).addr <= pkt_to_addr(sig_send_pkt);
@@ -195,30 +235,6 @@ begin
     end process;
 
     --------------------------------------------------------------------
-    -- Temporary config source
-    -- This is the "fake ReCOP" for now.
-    --------------------------------------------------------------------
-    process(clock, reset_n)
-    begin
-        if reset_n = '0' then
-            config_pkt  <= (others => '0');
-            config_sent <= '0';
-        elsif rising_edge(clock) then
-            if config_sent = '0' then
-                -- valid=1
-                -- type=CONFIG 1111
-                -- dest=001 signal ASP
-                -- payload bit 0 = enable
-                -- payload bits 31..29 = next destination 010
-                config_pkt  <= "1" & "1111" & "001" & x"40000001";
-                config_sent <= '1';
-            else
-                config_pkt <= (others => '0');
-            end if;
-        end if;
-    end process;
-
-    --------------------------------------------------------------------
     -- Signal generator ASP
     --------------------------------------------------------------------
     u_signal : entity work.asp_signal_noc
@@ -226,7 +242,7 @@ begin
             clk        => clock,
             reset_n    => reset_n,
             tick_16khz => tick_16khz,
-            noc_recv   => config_pkt,
+            noc_recv   => sig_recv_pkt,
             noc_send   => sig_send_pkt,
             noc_ready  => '1'
         );
@@ -274,6 +290,7 @@ begin
     begin
         if reset_n = '0' then
             rx_seen <= '0';
+            recop_seen <= '0';
             sig_seen <= '0';
             avg_seen <= '0';
             sym_seen <= '0';
@@ -287,6 +304,10 @@ begin
             heartbeat_counter <= heartbeat_counter + 1;
 
             -- Progress flags
+            if recv_port(1).data(31) = '1' then
+                recop_seen <= '1';
+            end if;
+
             if recv_port(2).data(31) = '1' then
                 sig_seen <= '1';
             end if;
@@ -311,15 +332,15 @@ begin
     --------------------------------------------------------------------
     -- Debug LEDs
     --------------------------------------------------------------------
-    LEDR(0) <= reset_n;              -- running
-    LEDR(1) <= config_sent;          -- config sent
-    LEDR(2) <= sig_seen;             -- signal packet reached moving average port
-    LEDR(3) <= avg_seen;             -- average packet reached symmetry port
-    LEDR(4) <= sym_seen;             -- symmetry packet reached peak port
-    LEDR(5) <= peak_seen;            -- peak/final packet reached debug port
-    LEDR(6) <= rx_seen;              -- final received
-    LEDR(7) <= latched_data(31);     -- final valid bit
-    LEDR(8) <= latched_addr(0);      -- address/debug bit
+    LEDR(0) <= reset_n;               -- running
+    LEDR(1) <= recop_seen;            -- ReCOP/config packet reached signal ASP port
+    LEDR(2) <= sig_seen;              -- signal packet reached moving average port
+    LEDR(3) <= avg_seen;              -- average packet reached symmetry port
+    LEDR(4) <= sym_seen;              -- symmetry packet reached peak port
+    LEDR(5) <= peak_seen;             -- peak/final packet reached debug port
+    LEDR(6) <= rx_seen;               -- final received
+    LEDR(7) <= latched_data(31);      -- final valid bit
+    LEDR(8) <= latched_addr(0);       -- address/debug bit
     LEDR(9) <= heartbeat_counter(25); -- heartbeat
 
     --------------------------------------------------------------------
