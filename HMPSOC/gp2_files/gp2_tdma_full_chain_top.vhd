@@ -5,9 +5,9 @@ use ieee.numeric_std.all;
 library work;
 use work.TdmaMinTypes.all;
 
-entity gp2_tdma_signal_test_top is
+entity gp2_tdma_full_chain_top is
     generic (
-        ports : positive := 4
+        ports : positive := 8
     );
     port (
         CLOCK_50 : in  std_logic;
@@ -21,7 +21,7 @@ entity gp2_tdma_signal_test_top is
     );
 end entity;
 
-architecture rtl of gp2_tdma_signal_test_top is
+architecture rtl of gp2_tdma_full_chain_top is
 
     signal clock   : std_logic;
     signal reset_n : std_logic;
@@ -35,11 +35,22 @@ architecture rtl of gp2_tdma_signal_test_top is
     signal config_pkt   : std_logic_vector(39 downto 0) := (others => '0');
     signal config_sent  : std_logic := '0';
 
-    signal sig_send_pkt : std_logic_vector(39 downto 0);
+    signal sig_send_pkt  : std_logic_vector(39 downto 0);
+    signal avg_recv_pkt  : std_logic_vector(39 downto 0);
+    signal avg_send_pkt  : std_logic_vector(39 downto 0);
+    signal sym_recv_pkt  : std_logic_vector(39 downto 0);
+    signal sym_send_pkt  : std_logic_vector(39 downto 0);
+    signal peak_recv_pkt : std_logic_vector(39 downto 0);
+    signal peak_send_pkt : std_logic_vector(39 downto 0);
 
     signal rx_seen      : std_logic := '0';
     signal latched_addr : std_logic_vector(7 downto 0) := (others => '0');
     signal latched_data : std_logic_vector(31 downto 0) := (others => '0');
+
+    signal sig_seen   : std_logic := '0';
+    signal avg_seen   : std_logic := '0';
+    signal sym_seen   : std_logic := '0';
+    signal peak_seen  : std_logic := '0';
 
     signal heartbeat_counter : unsigned(25 downto 0) := (others => '0');
 
@@ -65,6 +76,7 @@ architecture rtl of gp2_tdma_signal_test_top is
         end case;
     end function;
 
+    -- Convert GP2 40-bit ASP packet to Lab2 TDMA-MIN address.
     function pkt_to_addr(pkt : std_logic_vector(39 downto 0)) return std_logic_vector is
         variable a : std_logic_vector(7 downto 0);
     begin
@@ -73,17 +85,35 @@ architecture rtl of gp2_tdma_signal_test_top is
         return a;
     end function;
 
+    -- Convert GP2 40-bit ASP packet to Lab2 TDMA-MIN data.
     function pkt_to_data(pkt : std_logic_vector(39 downto 0)) return std_logic_vector is
         variable d : std_logic_vector(31 downto 0);
     begin
         d := (others => '0');
 
-        -- Lab 2 NoC inserts packet when data(31) = 1
+        -- Lab2 NoC inserts packet when data(31) = '1'
         d(31)           := pkt(39);           -- valid
         d(30 downto 27) := pkt(38 downto 35); -- packet type
-        d(26 downto 0)  := pkt(26 downto 0);  -- payload lower bits
+        d(26 downto 0)  := pkt(26 downto 0);  -- lower payload bits
 
         return d;
+    end function;
+
+    -- Convert Lab2 TDMA-MIN received data back into GP2 40-bit ASP packet.
+    function data_to_pkt(
+        data       : std_logic_vector(31 downto 0);
+        local_dest : std_logic_vector(2 downto 0)
+    ) return std_logic_vector is
+        variable p : std_logic_vector(39 downto 0);
+    begin
+        p := (others => '0');
+
+        p(39)           := data(31);           -- valid
+        p(38 downto 35) := data(30 downto 27); -- packet type
+        p(34 downto 32) := local_dest;         -- receiving node identity
+        p(26 downto 0)  := data(26 downto 0);  -- lower payload bits
+
+        return p;
     end function;
 
 begin
@@ -105,23 +135,48 @@ begin
         );
 
     --------------------------------------------------------------------
-    -- NoC send ports
-    -- Port 1 is driven by the signal generator ASP.
-    -- Other ports are idle.
+    -- Convert NoC receive ports into ASP receive packets
+    --
+    -- Port mapping:
+    -- port 1 = signal generator ASP
+    -- port 2 = moving average ASP
+    -- port 3 = symmetry/correlation ASP
+    -- port 4 = peak detector ASP
+    -- port 5 = debug sink
     --------------------------------------------------------------------
-    process(sig_send_pkt)
+    avg_recv_pkt  <= data_to_pkt(recv_port(2).data, "010");
+    sym_recv_pkt  <= data_to_pkt(recv_port(3).data, "011");
+    peak_recv_pkt <= data_to_pkt(recv_port(4).data, "100");
+
+    --------------------------------------------------------------------
+    -- NoC send ports
+    --------------------------------------------------------------------
+    process(sig_send_pkt, avg_send_pkt, sym_send_pkt, peak_send_pkt)
     begin
         for i in 0 to ports-1 loop
             send_port(i).addr <= (others => '0');
             send_port(i).data <= (others => '0');
         end loop;
 
+        -- Signal ASP sends to moving average at port 2
         send_port(1).addr <= pkt_to_addr(sig_send_pkt);
         send_port(1).data <= pkt_to_data(sig_send_pkt);
+
+        -- Moving average ASP sends to symmetry at port 3
+        send_port(2).addr <= pkt_to_addr(avg_send_pkt);
+        send_port(2).data <= pkt_to_data(avg_send_pkt);
+
+        -- Symmetry ASP sends to peak at port 4
+        send_port(3).addr <= pkt_to_addr(sym_send_pkt);
+        send_port(3).data <= pkt_to_data(sym_send_pkt);
+
+        -- Peak ASP sends to debug sink at port 5
+        send_port(4).addr <= pkt_to_addr(peak_send_pkt);
+        send_port(4).data <= pkt_to_data(peak_send_pkt);
     end process;
 
     --------------------------------------------------------------------
-    -- 16 kHz tick from 50 MHz clock
+    -- 16 kHz sample tick from 50 MHz clock
     --------------------------------------------------------------------
     process(clock, reset_n)
     begin
@@ -140,7 +195,8 @@ begin
     end process;
 
     --------------------------------------------------------------------
-    -- Send one config packet directly to the signal generator ASP
+    -- Temporary config source
+    -- This is the "fake ReCOP" for now.
     --------------------------------------------------------------------
     process(clock, reset_n)
     begin
@@ -176,37 +232,99 @@ begin
         );
 
     --------------------------------------------------------------------
-    -- Debug sink: latch anything received at NoC port 2
+    -- Moving average ASP
+    --------------------------------------------------------------------
+    u_avg : entity work.moving_average_noc_asp
+        port map (
+            clk       => clock,
+            reset_n   => reset_n,
+            noc_recv  => avg_recv_pkt,
+            noc_send  => avg_send_pkt,
+            noc_ready => '1'
+        );
+
+    --------------------------------------------------------------------
+    -- Symmetry / correlation ASP
+    --------------------------------------------------------------------
+    u_sym : entity work.symmetry_noc_asp
+        port map (
+            clk       => clock,
+            reset_n   => reset_n,
+            noc_recv  => sym_recv_pkt,
+            noc_send  => sym_send_pkt,
+            noc_ready => '1'
+        );
+
+    --------------------------------------------------------------------
+    -- Peak detector ASP
+    --------------------------------------------------------------------
+    u_peak : entity work.peak_detector_noc_asp
+        port map (
+            clk       => clock,
+            reset_n   => reset_n,
+            noc_recv  => peak_recv_pkt,
+            noc_send  => peak_send_pkt,
+            noc_ready => '1'
+        );
+
+    --------------------------------------------------------------------
+    -- Debug sink: latch final output at NoC port 5
     --------------------------------------------------------------------
     process(clock, reset_n)
     begin
         if reset_n = '0' then
             rx_seen <= '0';
+            sig_seen <= '0';
+            avg_seen <= '0';
+            sym_seen <= '0';
+            peak_seen <= '0';
+
             latched_addr <= (others => '0');
             latched_data <= (others => '0');
+
             heartbeat_counter <= (others => '0');
         elsif rising_edge(clock) then
             heartbeat_counter <= heartbeat_counter + 1;
 
+            -- Progress flags
             if recv_port(2).data(31) = '1' then
+                sig_seen <= '1';
+            end if;
+
+            if recv_port(3).data(31) = '1' then
+                avg_seen <= '1';
+            end if;
+
+            if recv_port(4).data(31) = '1' then
+                sym_seen <= '1';
+            end if;
+
+            if recv_port(5).data(31) = '1' then
+                peak_seen <= '1';
                 rx_seen <= '1';
-                latched_addr <= recv_port(2).addr;
-                latched_data <= recv_port(2).data;
+                latched_addr <= recv_port(5).addr;
+                latched_data <= recv_port(5).data;
             end if;
         end if;
     end process;
 
     --------------------------------------------------------------------
-    -- Debug outputs
+    -- Debug LEDs
     --------------------------------------------------------------------
-    LEDR(0) <= reset_n;                    -- system running
-    LEDR(1) <= config_sent;                -- config sent
-    LEDR(2) <= sig_send_pkt(39);           -- live signal valid, may be too fast
-    LEDR(3) <= rx_seen;                    -- NoC port 2 received packet
-    LEDR(7 downto 4) <= latched_data(30 downto 27); -- packet type
-    LEDR(8) <= latched_addr(0);            -- address bit
-    LEDR(9) <= heartbeat_counter(25);      -- heartbeat
+    LEDR(0) <= reset_n;              -- running
+    LEDR(1) <= config_sent;          -- config sent
+    LEDR(2) <= sig_seen;             -- signal packet reached moving average port
+    LEDR(3) <= avg_seen;             -- average packet reached symmetry port
+    LEDR(4) <= sym_seen;             -- symmetry packet reached peak port
+    LEDR(5) <= peak_seen;            -- peak/final packet reached debug port
+    LEDR(6) <= rx_seen;              -- final received
+    LEDR(7) <= latched_data(31);     -- final valid bit
+    LEDR(8) <= latched_addr(0);      -- address/debug bit
+    LEDR(9) <= heartbeat_counter(25); -- heartbeat
 
+    --------------------------------------------------------------------
+    -- Show final received payload low 16 bits on HEX
+    --------------------------------------------------------------------
     HEX0 <= hex7seg(latched_data(3 downto 0));
     HEX1 <= hex7seg(latched_data(7 downto 4));
     HEX2 <= hex7seg(latched_data(11 downto 8));

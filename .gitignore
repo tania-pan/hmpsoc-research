@@ -1,104 +1,65 @@
-# =========================
-# OS / editor junk
-# =========================
-.DS_Store
-Thumbs.db
-desktop.ini
-
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# =========================
-# Quartus generated files
-# =========================
+# Quartus generated files / build output
+output_files/
 db/
 incremental_db/
 simulation/
 greybox_tmp/
-hc_output/
-ip/
+.qsys_edit/
+.qsys_edit/
+.qsys_edit.lock
 
-*.qws
-*.smsg
-*.summary
-*.pin
-*.jdi
-*.bak
-*.done
+# Quartus project temporary/cache/database files
 *.rpt
-*.chg
-*.sld
-*.qdf
-*.qpf.bak
-*.qsf.bak
-*.vhd.bak
-
-# Quartus programming/output files
-output_files/
+*.summary
+*.smsg
+*.done
+*.jdi
+*.pin
 *.sof
 *.pof
 *.cdf
-*.jic
-*.rbf
-*.svf
+*.qws
+*.qdf
+*.qpf.bak
+*.qsf.bak
 
-# Netlists / generated HDL
-*.cmp
-*.bsf
-*.ppf
-*.xml
-*.map
+# Quartus database/intermediate files
+*.cdb
+*.hdb
+*.rdb
+*.tdb
+*.cbd
+*.hbd
+*.ddb
+*.rcf
+*.sld
+*.sld_design_entry.sci
+*.sci
 *.eqn
-*.qip
 *.sip
 *.spd
-*.vho
+*.cmp
+*.bsf
 
-# =========================
-# ModelSim / Questa
-# =========================
-transcript
-modelsim.ini
-vsim.wlf
-wlft*
+# Timing / synthesis / fitter generated files
+*.sta.rpt
+*.fit.rpt
+*.map.rpt
+*.flow.rpt
+*.tan.rpt
+*.asm.rpt
+*.pow.rpt
+
+# Questa/ModelSim generated files
 work/
+transcript
+vsim.wlf
 *.wlf
 *.vstf
-*.log
+*.mpf
 
-# Simulation outputs
-*.hex
-*.mif.bak
-
-# =========================
-# Temporary / cache
-# =========================
+# OS/editor junk
+.DS_Store
+Thumbs.db
+*.swp
 *.tmp
-*.temp
-*.cache
-
-# =========================
-# Python assembler / scripts
-# =========================
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-env/
-
-# =========================
-# Keep these tracked
-# =========================
-#!*.qpf
-#!*.qsf
-#!*.vhd
-#!*.v
-#!*.sv
-#!*.mif
-#!*.hex
-#!README*
