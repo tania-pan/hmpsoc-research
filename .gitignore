@@ -1,14 +1,42 @@
-# Quartus generated files / build output
+# =========================================================
+# Keep important source/project files
+# =========================================================
+!*.qpf
+!*.qsf
+!*.qsys
+!*.sopcinfo
+!*.qip
+!*.ip
+!*.vhd
+!*.vhdl
+!*.v
+!*.sv
+!*.sdc
+!*.mif
+!*.hex
+!*.do
+!*.c
+!*.h
+!*.asm
+!*.py
+!*.txt
+!*.md
+
+# =========================================================
+# Quartus generated build folders
+# =========================================================
 output_files/
 db/
 incremental_db/
-simulation/
 greybox_tmp/
-.qsys_edit/
+simulation/
 .qsys_edit/
 .qsys_edit.lock
+.qsys_edit/**
 
-# Quartus project temporary/cache/database files
+# =========================================================
+# Quartus reports / programming / temp files
+# =========================================================
 *.rpt
 *.summary
 *.smsg
@@ -20,10 +48,13 @@ greybox_tmp/
 *.cdf
 *.qws
 *.qdf
-*.qpf.bak
-*.qsf.bak
+*.bak
+*.orig
+*.rej
 
+# =========================================================
 # Quartus database/intermediate files
+# =========================================================
 *.cdb
 *.hdb
 *.rdb
@@ -40,8 +71,14 @@ greybox_tmp/
 *.spd
 *.cmp
 *.bsf
+*.bpm
+*.ppf
+*.qmsg
+*.qws
 
+# =========================================================
 # Timing / synthesis / fitter generated files
+# =========================================================
 *.sta.rpt
 *.fit.rpt
 *.map.rpt
@@ -49,17 +86,111 @@ greybox_tmp/
 *.tan.rpt
 *.asm.rpt
 *.pow.rpt
+*.syn.rpt
+*.analysis.rpt
+*.place.rpt
+*.route.rpt
 
-# Questa/ModelSim generated files
+# =========================================================
+# Platform Designer / Qsys generated junk
+# Keep .qsys, .qip, .sopcinfo above
+# =========================================================
+*_generation.rpt
+*_generation.log
+*_inst.v
+*_inst.vhd
+*_bb.v
+*_bb.vhd
+*_cmp.vhd
+*_cmp.v
+*_hw.tcl
+*_sw.tcl
+*_sip.qip
+*_regenerate.tcl
+*_parameters.tcl
+*_simulation/
+*_synthesis/
+*/synthesis/submodules/
+*/synthesis/*.cmp
+*/synthesis/*.html
+*/synthesis/*.xml
+*/synthesis/*.rpt
+*/synthesis/*.log
+*/synthesis/*.spd
+*/synthesis/*.ppf
+*/synthesis/*.sip
+*/synthesis/*.sopcinfo
+*/simulation/
+*/testbench/
+*_sim/
+*_tb/
+
+# Keep top-level generated QIP if you need it
+!*/synthesis/*.qip
+!*.qip
+
+# =========================================================
+# Nios II software build outputs
+# =========================================================
+*_bsp/
+software/*_bsp/
+nios_software/*_bsp/
+*/Debug/
+*/Release/
+*/obj/
+*/bin/
+*.elf
+*.map
+*.objdump
+*.flash
+*.mem
+*.dat
+*.o
+*.a
+*.d
+*.dep
+
+# Eclipse / Nios IDE metadata
+.metadata/
+.settings/
+.cproject
+.project
+.pydevproject
+
+# BSP generated files if accidentally outside *_bsp
+linker.x
+alt_sys_init.c
+public.mk
+Makefile
+create-this-bsp
+settings.bsp
+
+# =========================================================
+# Questa / ModelSim generated files
+# =========================================================
 work/
 transcript
 vsim.wlf
 *.wlf
 *.vstf
 *.mpf
+modelsim.ini
+wlft*
+
+# =========================================================
+# Misc tool/output files
+# =========================================================
+*.log
+*.jou
+*.str
+*.tmp
+*.temp
+*.cache
+*.xml.bak
 
 # OS/editor junk
 .DS_Store
 Thumbs.db
 *.swp
-*.tmp
+*.swo
+*.~*
